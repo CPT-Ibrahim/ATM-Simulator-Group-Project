@@ -1,115 +1,215 @@
 package com.atmbanksimulator;
 
-// ===== 📚🌐Bank (Domain / Service / Business Logic) =====
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
-// Bank class: a simple implementation of a bank, containing a list of bank accounts
-// and has a currently logged-in account (loggedInAccount).
+// ===== 📚🌐Bank (Domain / Service / Business Logic) =====
+//
+// Bank class: all account data is now stored in and read from the MySQL database.
+// The only in-memory state kept is the currently logged-in BankAccount object,
+// which is used as a session token (account number, password, and a local
+// balance snapshot). Every deposit / withdrawal / balance query is executed
+// directly against the database so data is always consistent.
+
 public class Bank {
 
-    // ToDO: Optional extension:
-    // Improve account management in the Bank class:
-    // Replace Array with ArrayList for managing BankAccount objects.
-    // Refactor addBankAccount and login methods to leverage ArrayList.
+    // Currently logged-in account object (null when no one is logged in).
+    // This is a lightweight in-memory object that mirrors the DB row for the
+    // active session; it is discarded on logout.
+    private BankAccount loggedInAccount = null;
 
-    // Instance variables storing bank information
-    private int maxAccounts = 10;                       // Maximum number of accounts the bank can hold
-    private int numAccounts = 0;                        // Current number of accounts in the bank
-    private BankAccount[] accounts = new BankAccount[maxAccounts];  // Array to hold BankAccount objects
-    private BankAccount loggedInAccount = null;         // Currently logged-in account ('null' if no one is logged in)
+    // -----------------------------------------------------------------------
+    // Factory / helper
+    // -----------------------------------------------------------------------
 
-    // a method to create new BankAccount - this is known as a 'factory method' and is a more
-    // flexible way to do it than just using the 'new' keyword directly.
+    // Factory method – keeps the rest of the code from needing 'new BankAccount' directly.
     public BankAccount makeBankAccount(String accNumber, String accPasswd, int balance) {
         return new BankAccount(accNumber, accPasswd, balance);
     }
 
-    // a method to add a new bank account to the bank - it returns true if it succeeds
-    // or false if it fails (because the bank is 'full')
+    // -----------------------------------------------------------------------
+    // addBankAccount – inserts a new account into the database.
+    // Uses INSERT IGNORE so calling it again with the same account number
+    // is safe (silently does nothing instead of throwing a duplicate-key error).
+    // -----------------------------------------------------------------------
+
     public boolean addBankAccount(BankAccount a) {
-        if (numAccounts < maxAccounts) {
-            accounts[numAccounts] = a;
-            numAccounts++ ;
+        String sql = "INSERT IGNORE INTO bank_accounts (acc_number, acc_password, balance) "
+                   + "VALUES (?, ?, ?)";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, a.getAccNumber());
+            ps.setString(2, a.getaccPasswd());
+            ps.setInt   (3, a.getBalance());
+            ps.executeUpdate();
             return true;
-        } else {
+
+        } catch (SQLException e) {
+            System.out.println("Bank.addBankAccount failed: " + e.getMessage());
             return false;
         }
     }
 
-    // Variant of addBankAccount: creates a BankAccount and adds it in one step.
-    // This is an example of method overloading: two methods can share the same name
-    // if they have different parameter lists.
+    // Overloaded convenience version – creates a BankAccount and inserts it in one step.
     public boolean addBankAccount(String accNumber, String accPasswd, int balance) {
         return addBankAccount(makeBankAccount(accNumber, accPasswd, balance));
     }
 
-    // Check whether the given accountNumber and password match an existing BankAccount.
-    // If successful, set 'loggedInAccount' to that account and return true.
-    // Otherwise, set 'loggedInAccount' to null and return false.
-    public boolean login(String accountNumber, String password) {
-        logout(); // logout of any previous loggedInAccount
+    // -----------------------------------------------------------------------
+    // login – look up matching row in the database; keep object in memory for session.
+    // -----------------------------------------------------------------------
 
-        // Search the accounts array to find a BankAccount with a matching accountNumber and password.
-        // - If found, set 'loggedInAccount' to that account and return true.
-        // - If not found, reset 'loggedInAccount' to null and return false.
-        for (BankAccount b: accounts) {
-            if (b.getAccNumber().equals(accountNumber) && b.getaccPasswd().equals(password)) {
-                // found the right account
-                loggedInAccount = b;
-                return true;
+    public boolean login(String accountNumber, String password) {
+        logout(); // clear any previous session first
+
+        String sql = "SELECT acc_number, acc_password, balance "
+                   + "FROM bank_accounts "
+                   + "WHERE acc_number = ? AND acc_password = ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, accountNumber);
+            ps.setString(2, password);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    // Row found – create in-memory session object
+                    loggedInAccount = new BankAccount(
+                        rs.getString("acc_number"),
+                        rs.getString("acc_password"),
+                        rs.getInt   ("balance")
+                    );
+                    return true;
+                }
             }
+
+        } catch (SQLException e) {
+            System.out.println("Bank.login failed: " + e.getMessage());
         }
-        // not found - return false
+
         loggedInAccount = null;
         return false;
     }
 
-    // Log out of the currently logged-in account, if any
+    // -----------------------------------------------------------------------
+    // logout / loggedIn helpers
+    // -----------------------------------------------------------------------
+
     public void logout() {
-        if (loggedIn()) {
-            loggedInAccount = null;
-        }
+        loggedInAccount = null;
     }
 
-    // Check whether the bank currently has a logged-in account
     public boolean loggedIn() {
-        if (loggedInAccount == null) {
-            return false;
-        } else {
+        return loggedInAccount != null;
+    }
+
+    // -----------------------------------------------------------------------
+    // deposit – adds 'amount' to the balance column in the database.
+    // Also updates the local session object so the in-memory state stays in sync.
+    // -----------------------------------------------------------------------
+
+    public boolean deposit(int amount) {
+        if (!loggedIn()) return false;
+
+        // Delegate validation to BankAccount (amount must not be negative)
+        if (!loggedInAccount.deposit(amount)) return false;
+
+        String sql = "UPDATE bank_accounts SET balance = balance + ? WHERE acc_number = ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt   (1, amount);
+            ps.setString(2, loggedInAccount.getAccNumber());
+            ps.executeUpdate();
             return true;
-        }
-    }
 
-    // Attempt to deposit money into the currently logged-in account
-    // by calling the deposit method of the BankAccount object
-    public boolean deposit(int amount)
-    {
-        if (loggedIn()) {
-            return loggedInAccount.deposit(amount);
-        } else {
+        } catch (SQLException e) {
+            System.out.println("Bank.deposit DB update failed: " + e.getMessage());
+            // Roll back the in-memory change so local state stays consistent
+            loggedInAccount.withdraw(amount);
             return false;
         }
     }
 
+    // -----------------------------------------------------------------------
+    // withdraw – reads the live balance from the DB first, then deducts.
+    // This prevents over-drafts in case the balance changed since login.
+    // -----------------------------------------------------------------------
 
-    // Attempt to withdraw money from the currently logged-in account
-    // by calling the withdraw method of the BankAccount object
-    public boolean withdraw(int amount)
-    {
-        if (loggedIn()) {
-            return loggedInAccount.withdraw(amount);
-        } else {
+    public boolean withdraw(int amount) {
+        if (!loggedIn()) return false;
+        if (amount <= 0)  return false;
+
+        // Fetch live balance from the database
+        String selectSql = "SELECT balance FROM bank_accounts WHERE acc_number = ?";
+        int liveBalance;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(selectSql)) {
+
+            ps.setString(1, loggedInAccount.getAccNumber());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return false;  // account somehow missing
+                liveBalance = rs.getInt("balance");
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Bank.withdraw balance check failed: " + e.getMessage());
+            return false;
+        }
+
+        // Reject if insufficient funds
+        if (liveBalance < amount) return false;
+
+        // Perform the deduction in the database
+        String updateSql = "UPDATE bank_accounts SET balance = balance - ? WHERE acc_number = ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(updateSql)) {
+
+            ps.setInt   (1, amount);
+            ps.setString(2, loggedInAccount.getAccNumber());
+            ps.executeUpdate();
+
+            // Keep the in-memory session object in sync
+            loggedInAccount.withdraw(amount);
+            return true;
+
+        } catch (SQLException e) {
+            System.out.println("Bank.withdraw DB update failed: " + e.getMessage());
             return false;
         }
     }
 
-    // get the currently logged-in account balance
-    // by calling the getBalance method of the BankAccount object
-    public int getBalance()
-    {
-        if (loggedIn()) {
-            return loggedInAccount.getBalance();
-        } else {
-            return -1; // use -1 as an indicator of an error
+    // -----------------------------------------------------------------------
+    // getBalance – always fetches the live value from the database.
+    // -----------------------------------------------------------------------
+
+    public int getBalance() {
+        if (!loggedIn()) return -1;
+
+        String sql = "SELECT balance FROM bank_accounts WHERE acc_number = ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, loggedInAccount.getAccNumber());
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("balance");
+                }
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Bank.getBalance failed: " + e.getMessage());
         }
+
+        return -1; // -1 indicates an error
     }
 }
