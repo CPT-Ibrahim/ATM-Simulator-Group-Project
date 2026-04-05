@@ -8,9 +8,6 @@ import java.sql.SQLException;
  * Provides a single place for opening a connection to the MySQL database.
  * The class wraps {@code DriverManager.getConnection(...)} so the rest
  * of the application does not need to repeat connection logic.
- *
- * @author Ibraheem Amro
- * @version 1.0
  */
 public class DBConnection {
 

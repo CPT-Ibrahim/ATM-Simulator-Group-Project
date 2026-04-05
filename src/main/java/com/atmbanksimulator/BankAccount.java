@@ -1,56 +1,47 @@
 package com.atmbanksimulator;
 
-// ===== 📚🌐BankAccount (Domain / Service / Business Logic) =====
-
-// BankAccount class:
-// - Stores instance variables for account number, password, and balance
-// - Provides methods to withdraw, deposit, check balance, etc.
+// ===== BankAccount (Base Class) =====
+// Base class for all account types.
+// Fields are protected so subclasses can access them directly.
 public class BankAccount {
-    private String accNumber = "";
-    private String accPasswd ="";
-    private int balance = 0;
+
+    protected String accNumber  = "";
+    protected String accPasswd  = "";
+    protected int    balance    = 0;
+    protected String accountType = "standard";
 
     public BankAccount() {}
+
     public BankAccount(String a, String p, int b) {
-        accNumber = a;
-        accPasswd = p;
-        balance = b;
+        accNumber   = a;
+        accPasswd   = p;
+        balance     = b;
+        accountType = "standard";
     }
 
-    // Withdraw money from this account.
-    // Returns true if successful, or false if the amount is negative or exceeds the current balance.
-    public boolean withdraw( int amount ) {
-        if (amount < 0 || balance < amount) {
-            return false;
-        } else {
-            balance = balance - amount;  // subtract amount from balance
-            return true;
-        }
+    public BankAccount(String a, String p, int b, String type) {
+        accNumber   = a;
+        accPasswd   = p;
+        balance     = b;
+        accountType = type;
     }
 
-    // deposit the amount of money into this account.
-    // Return true if successful,or false if the amount is negative
-    public boolean deposit( int amount ) {
-        if (amount < 0) {
-            return false;
-        } else {
-            balance = balance + amount;  // add amount to balance
-            return true;
-        }
+    // Withdraw – overridden by subclasses for custom rules
+    public boolean withdraw(int amount) {
+        if (amount < 0 || balance < amount) return false;
+        balance -= amount;
+        return true;
     }
 
-    // Getter for the account balance
-    // Returns the current balance of this account
-    public int getBalance() {
-        return balance;
+    // Deposit – overridden by subclasses for custom rules
+    public boolean deposit(int amount) {
+        if (amount < 0) return false;
+        balance += amount;
+        return true;
     }
 
-    // Getter for the account number
-    public String getAccNumber() {
-        return accNumber;
-    }
-    // Getter for the account password
-    public String getaccPasswd() {
-        return accPasswd;
-    }
+    public int    getBalance()     { return balance; }
+    public String getAccNumber()   { return accNumber; }
+    public String getaccPasswd()   { return accPasswd; }
+    public String getAccountType() { return accountType; }
 }
