@@ -1,0 +1,30 @@
+#Layout {
+    -fx-grid-lines-visible: false;
+    -fx-hgap: 5;
+    -fx-vgap: 5;
+    -fx-padding: 10;
+}
+
+#Buttons {
+    -fx-pref-columns: 6;
+    -fx-pref-tile-width: 75;
+    -fx-hgap: 5;
+    -fx-vgap: 5;
+}
+
+.button {
+    -fx-font: bold 16pt "courier new";
+}
+
+.label {
+    -fx-font: bold 14pt "Courier New";  /* font size and weight */
+    -fx-text-fill: darkblue;            /* text color */
+}
+
+.text-field {
+    -fx-font: bold 14pt "Courier New"; /* or any font size you want */
+}
+
+.text-area {
+    -fx-font: bold 14pt "Courier New"; /* or any font size you want */
+}
