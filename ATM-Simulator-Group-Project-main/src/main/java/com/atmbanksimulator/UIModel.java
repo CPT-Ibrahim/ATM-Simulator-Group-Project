@@ -28,75 +28,19 @@ public class UIModel {
     }
 
     // -----------------------------------------------------------------------
-    // FAQ – appended to every screen
-    // -----------------------------------------------------------------------
-    private String faq() {
-        return "\n================================\n" +
-               "  FAQ\n"                             +
-               "================================\n"  +
-               "\n"                                  +
-               "  Q: How do I withdraw cash?\n"      +
-               "  A: Enter amount + press W/D\n"     +
-               "\n"                                  +
-               "  Q: How do I check my balance?\n"   +
-               "  A: Press Bal when logged in\n"     +
-               "\n"                                  +
-               "  Q: How do I change my PIN?\n"      +
-               "  A: Press ChP when logged in\n"     +
-               "\n"                                  +
-               "  Q: How do I deposit?\n"            +
-               "  A: Enter amount + press Dep\n"     +
-               "\n"                                  +
-               "  Q: How many PIN attempts\n"        +
-               "     are allowed?\n"                 +
-               "  A: Coming soon\n"                  +
-               "\n"                                  +
-               "  Q: What denominations can\n"       +
-               "     be dispensed?\n"                +
-               "  A: Coming soon\n"                  +
-               "\n"                                  +
-               "  Q: How are failed transactions\n"  +
-               "     reversed?\n"                    +
-               "  A: Coming soon\n"                  +
-               "\n"                                  +
-               "  Q: How do I get a receipt?\n"      +
-               "  A: Coming soon\n"                  +
-               "\n"                                  +
-               "  Q: What if the machine\n"          +
-               "     times out?\n"                   +
-               "  A: Coming soon\n"                  +
-               "\n"                                  +
-               "  Q: Is audio guidance available?\n" +
-               "  A: Coming soon\n"                  +
-               "\n"                                  +
-               "  Q: Can text be enlarged or\n"      +
-               "     high-contrast?\n"               +
-               "  A: Coming soon\n"                  +
-               "\n"                                  +
-               "  Q: Is there a simple mode for\n"   +
-               "     older or first-time users?\n"   +
-               "  A: Coming soon\n"                  +
-               "\n"                                  +
-               "  Q: Accessibility support?\n"       +
-               "  A: Coming soon\n"                  +
-               "================================";
-    }
-
-    // -----------------------------------------------------------------------
     // Main menu helper
     // -----------------------------------------------------------------------
     private String mainMenu() {
-        return "================================\n" +
-               "  MAIN MENU\n"                     +
-               "================================\n" +
-               "  Dep  = Deposit\n"                +
-               "  W/D  = Withdraw\n"               +
-               "  Bal  = Check Balance\n"          +
-               "  ChP  = Change Password\n"        +
-               "  New  = Create Account\n"         +
-               "  Fin  = Logout\n"                 +
-               "================================"  +
-               faq();
+        return "========================\n" +
+                "  MAIN MENU\n"             +
+                "========================\n" +
+                "  Dep = Deposit\n"         +
+                "  W/D = Withdraw\n"        +
+                "  Bal = Check Balance\n"   +
+                "  ChP = Change Password\n" +
+                "  New = Create Account\n"  +
+                "  Fin = Logout\n"          +
+                "========================";
     }
 
     // -----------------------------------------------------------------------
@@ -106,14 +50,15 @@ public class UIModel {
         setState(STATE_ACCOUNT_NO);
         numberPadInput = "";
         message = "Welcome to Brighton ATM";
-        result  = "================================\n" +
-                  "  Please enter your account\n"     +
-                  "  number using the keypad\n"       +
-                  "  then press \"Ent\"\n"            +
-                  "================================\n" +
-                  "  New user? Press \"New\"\n"       +
-                  "  to create an account"            +
-                  faq();
+        result  = "========================\n"       +
+                "  Please enter your\n"            +
+                "  account number\n"               +
+                "  then press \"Ent\"\n"           +
+                "========================\n"       +
+                "  New user? Press \"New\"\n"      +
+                "  to create an account\n"         +
+                "========================\n"       +
+                "  Press ? FAQ for help";
         update();
     }
 
@@ -125,21 +70,21 @@ public class UIModel {
         numberPadInput = "";
         message = msg;
         if (msg.equals("Thank you for using the Bank ATM")) {
-            result = "================================\n" +
-                     "  Goodbye! Have a great day.\n"   +
-                     "================================\n" +
-                     "  Enter account number to\n"      +
-                     "  start a new session\n"          +
-                     "  then press \"Ent\""             +
-                     faq();
+            result = "========================\n"  +
+                    "  Goodbye!\n"               +
+                    "  Have a great day.\n"      +
+                    "========================\n"  +
+                    "  Enter account number\n"   +
+                    "  to start a new session\n" +
+                    "  then press \"Ent\"";
         } else {
-            result = "================================\n" +
-                     "  Enter your account number\n"    +
-                     "  using the keypad\n"             +
-                     "  then press \"Ent\"\n"           +
-                     "================================\n" +
-                     "  New user? Press \"New\""        +
-                     faq();
+            result = "========================\n"  +
+                    "  Enter your account\n"     +
+                    "  number using keypad\n"    +
+                    "  then press \"Ent\"\n"     +
+                    "========================\n"  +
+                    "  New user? Press \"New\"\n" +
+                    "  Press ? FAQ for help";
         }
     }
 
@@ -182,11 +127,12 @@ public class UIModel {
                     numberPadInput = "";
                     setState(STATE_PASSWORD);
                     message = "Account Number Accepted";
-                    result  = "================================\n" +
-                              "  Now enter your password\n"       +
-                              "  using the keypad\n"              +
-                              "  then press \"Ent\""              +
-                              faq();
+                    result  = "========================\n" +
+                            "  Now enter your\n"        +
+                            "  password using keypad\n" +
+                            "  then press \"Ent\"\n"    +
+                            "========================\n" +
+                            "  Press ? FAQ for help";
                 }
                 break;
 
@@ -213,11 +159,12 @@ public class UIModel {
                     numberPadInput = "";
                     setState(STATE_CHANGE_PW_NEW);
                     message = "Old Password Verified";
-                    result  = "================================\n"    +
-                              "  Enter NEW password\n"               +
-                              "  (min 6 chars, letters + digits)\n"  +
-                              "  then press \"Ent\""                 +
-                              faq();
+                    result  = "========================\n"     +
+                            "  Enter NEW password\n"         +
+                            "  (min 6 chars,\n"             +
+                            "  letters + digits)\n"         +
+                            "  then press \"Ent\"\n"        +
+                            "========================";
                 }
                 break;
 
@@ -229,57 +176,61 @@ public class UIModel {
                     message = "Password Changed Successfully";
                     result  = mainMenu();
                 } else {
-                    message = "Invalid Password (min 6 chars, letters + digits)";
-                    result  = "================================\n"    +
-                              "  Enter NEW password again\n"         +
-                              "  (min 6 chars, letters + digits)\n"  +
-                              "  then press \"Ent\""                 +
-                              faq();
+                    message = "Invalid Password";
+                    result  = "========================\n"  +
+                            "  Enter NEW password\n"     +
+                            "  again\n"                  +
+                            "  (min 6 chars,\n"          +
+                            "  letters + digits)\n"      +
+                            "  then press \"Ent\"\n"     +
+                            "========================";
                 }
                 break;
 
             case STATE_NEW_ACC_NO:
                 if (numberPadInput.equals("") || numberPadInput.length() < 4) {
-                    message = "Account Number Too Short (min 4 digits)";
-                    result  = "================================\n" +
-                              "  Re-enter account number\n"       +
-                              "  (min 4 digits)\n"                +
-                              "  then press \"Ent\""              +
-                              faq();
+                    message = "Account Number Too Short";
+                    result  = "========================\n" +
+                            "  Re-enter account\n"      +
+                            "  number (min 4 digits)\n" +
+                            "  then press \"Ent\"\n"    +
+                            "========================";
                 } else {
                     newAccNumber = numberPadInput;
                     numberPadInput = "";
                     setState(STATE_NEW_ACC_PW);
                     message = "Account Number Accepted";
-                    result  = "================================\n"   +
-                              "  Enter a password\n"                 +
-                              "  (min 6 chars, letters + digits)\n"  +
-                              "  then press \"Ent\""                 +
-                              faq();
+                    result  = "========================\n"  +
+                            "  Enter a password\n"       +
+                            "  (min 6 chars,\n"          +
+                            "  letters + digits)\n"      +
+                            "  then press \"Ent\"\n"     +
+                            "========================";
                 }
                 break;
 
             case STATE_NEW_ACC_PW:
                 if (numberPadInput.length() < 6) {
-                    message = "Password Too Short (min 6 chars)";
-                    result  = "================================\n"   +
-                              "  Re-enter password\n"                +
-                              "  (min 6 chars, letters + digits)\n"  +
-                              "  then press \"Ent\""                 +
-                              faq();
+                    message = "Password Too Short (min 6)";
+                    result  = "========================\n"  +
+                            "  Re-enter password\n"      +
+                            "  (min 6 chars,\n"          +
+                            "  letters + digits)\n"      +
+                            "  then press \"Ent\"\n"     +
+                            "========================";
                 } else {
                     newAccPasswd = numberPadInput;
                     numberPadInput = "";
                     setState(STATE_NEW_ACC_TYPE);
                     message = "Password Accepted";
-                    result  = "================================\n" +
-                              "  Choose account type:\n"          +
-                              "  1 = Student\n"                   +
-                              "  2 = Prime\n"                     +
-                              "  3 = Saving\n"                    +
-                              "  4 = Standard\n"                  +
-                              "  then press \"Ent\""              +
-                              faq();
+                    result  = "========================\n" +
+                            "  Choose account type:\n"  +
+                            "  1 = Student\n"           +
+                            "  2 = Prime\n"             +
+                            "  3 = Saving\n"            +
+                            "  4 = Standard\n"          +
+                            "  then press \"Ent\"\n"    +
+                            "========================";
                 }
                 break;
 
@@ -318,12 +269,11 @@ public class UIModel {
         if (state.equals(STATE_LOGGED_IN)) {
             numberPadInput = "";
             message = "Balance Available";
-            result  = "================================\n"          +
-                      "  Your current balance is:\n"               +
-                      "  \u00A3" + bank.getBalance() + "\n"        +
-                      "================================\n"          +
-                      "  Dep / W/D / ChP / Fin"                    +
-                      faq();
+            result  = "========================\n"              +
+                    "  Your balance is:\n"                   +
+                    "  \u00A3" + bank.getBalance() + "\n"   +
+                    "========================\n"              +
+                    "  Dep / W/D / ChP / Fin";
         } else {
             reset("You Are Not Logged In");
         }
@@ -340,27 +290,28 @@ public class UIModel {
             if (amount > 0) {
                 if (bank.withdraw(amount)) {
                     message = "Withdrawal Successful";
-                    result  = "================================\n"              +
-                              "  Withdrawn: \u00A3" + amount + "\n"           +
-                              "  New balance: \u00A3" + bank.getBalance() + "\n" +
-                              "================================\n"              +
-                              "  Dep / W/D / Bal / ChP / Fin"                 +
-                              faq();
+                    result  = "========================\n"                       +
+                            "  Withdrawn:\n"                                  +
+                            "  \u00A3" + amount + "\n"                        +
+                            "  New balance:\n"                                +
+                            "  \u00A3" + bank.getBalance() + "\n"            +
+                            "========================\n"                       +
+                            "  Dep / W/D / Bal / Fin";
                 } else {
-                    message = "Withdrawal Failed: Insufficient Funds";
-                    result  = "================================\n"                  +
-                              "  Insufficient funds\n"                             +
-                              "  Balance: \u00A3" + bank.getBalance() + "\n"       +
-                              "================================\n"                  +
-                              "  Please enter a new amount"                        +
-                              faq();
+                    message = "Withdrawal Failed";
+                    result  = "========================\n"                       +
+                            "  Insufficient funds\n"                          +
+                            "  Balance:\n"                                    +
+                            "  \u00A3" + bank.getBalance() + "\n"            +
+                            "========================\n"                       +
+                            "  Please enter new amount";
                 }
             } else {
                 message = "Invalid Amount";
-                result  = "================================\n" +
-                          "  Please enter a valid amount\n"  +
-                          "  then press W/D"                 +
-                          faq();
+                result  = "========================\n"    +
+                        "  Enter a valid amount\n"     +
+                        "  then press W/D\n"           +
+                        "========================";
             }
         } else {
             reset("You Are Not Logged In");
@@ -378,18 +329,19 @@ public class UIModel {
             if (amount > 0) {
                 bank.deposit(amount);
                 message = "Deposit Successful";
-                result  = "================================\n"              +
-                          "  Deposited: \u00A3" + amount + "\n"           +
-                          "  New balance: \u00A3" + bank.getBalance() + "\n" +
-                          "================================\n"              +
-                          "  Dep / W/D / Bal / ChP / Fin"                 +
-                          faq();
+                result  = "========================\n"                       +
+                        "  Deposited:\n"                                  +
+                        "  \u00A3" + amount + "\n"                        +
+                        "  New balance:\n"                                +
+                        "  \u00A3" + bank.getBalance() + "\n"            +
+                        "========================\n"                       +
+                        "  Dep / W/D / Bal / Fin";
             } else {
                 message = "Invalid Amount";
-                result  = "================================\n" +
-                          "  Please enter a valid amount\n"  +
-                          "  then press Dep"                 +
-                          faq();
+                result  = "========================\n"   +
+                        "  Enter a valid amount\n"    +
+                        "  then press Dep\n"          +
+                        "========================";
             }
         } else {
             reset("You Are Not Logged In");
@@ -405,13 +357,12 @@ public class UIModel {
             numberPadInput = "";
             setState(STATE_CHANGE_PW_OLD);
             message = "Change Password";
-            result  = "================================\n" +
-                      "  Enter your OLD password\n"      +
-                      "  using the keypad\n"             +
-                      "  then press \"Ent\"\n"           +
-                      "================================\n" +
-                      "  Press CLR to clear input"       +
-                      faq();
+            result  = "========================\n" +
+                    "  Enter your OLD\n"         +
+                    "  password using keypad\n"  +
+                    "  then press \"Ent\"\n"     +
+                    "========================\n" +
+                    "  Press CLR to clear";
         } else {
             reset("You Are Not Logged In");
         }
@@ -428,13 +379,12 @@ public class UIModel {
             newAccPasswd = "";
             setState(STATE_NEW_ACC_NO);
             message = "Create New Account";
-            result  = "================================\n" +
-                      "  Enter a new account number\n"   +
-                      "  (min 4 digits)\n"               +
-                      "  then press \"Ent\"\n"           +
-                      "================================\n" +
-                      "  Press CLR to clear input"       +
-                      faq();
+            result  = "========================\n"  +
+                    "  Enter a new account\n"     +
+                    "  number (min 4 digits)\n"   +
+                    "  then press \"Ent\"\n"      +
+                    "========================\n"  +
+                    "  Press CLR to clear";
         } else {
             reset("Please Log Out First");
         }
