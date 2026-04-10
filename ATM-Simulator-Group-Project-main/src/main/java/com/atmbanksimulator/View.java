@@ -6,6 +6,9 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.text.*;
 import javafx.stage.Stage;
+import javafx.scene.control.Tooltip;
+import javafx.stage.Popup;
+import javafx.scene.control.ScrollPane;
 
 // ===== 🙂 View (Eyes / Ears / Nose / Mouth / Face) =====
 
@@ -13,8 +16,8 @@ import javafx.stage.Stage;
 // It does not know anything about business logic;
 // it only updates the display when notified by the UIModel.
 class View {
-    int H = 500;         // Height of window pixels
-    int W = 500;         // Width  of window pixels
+    int H = 600;         // Height of window pixels
+    int W = 520;         // Width  of window pixels
 
     Controller controller; // Reference to the Controller (part of the MVC setup)
 
@@ -86,6 +89,71 @@ class View {
             }
         }
         grid.add(buttonPane,0,3); // add the tiled pane of buttons to the main grid
+
+        // FAQ Button
+        Button faqBtn = new Button("? FAQ");
+        faqBtn.setId("faqButton");
+        Tooltip faqTip = new Tooltip(
+                "Hover tips:\n" +
+                        "Deposit   → enter amount + Dep\n" +
+                        "Withdraw  → enter amount + W/D\n" +
+                        "Balance   → press Bal\n" +
+                        "Password  → press ChP\n" +
+                        "Logout    → press Fin"
+        );
+        faqTip.setShowDelay(javafx.util.Duration.millis(200));
+        Tooltip.install(faqBtn, faqTip);
+
+        faqBtn.setOnAction(e -> {
+            javafx.stage.Stage faqStage = new javafx.stage.Stage();
+            faqStage.setTitle("FAQ - Help");
+            TextArea faqText = new TextArea(
+                    "HOW TO USE THE ATM\n" +
+                            "================================\n\n" +
+                            "Q: How do I withdraw cash?\n" +
+                            "A: Enter amount using keypad then press W/D\n\n" +
+                            "Q: How do I check my balance?\n" +
+                            "A: Press Bal when logged in\n\n" +
+                            "Q: How do I change my PIN?\n" +
+                            "A: Press ChP when logged in\n\n" +
+                            "Q: How do I deposit?\n" +
+                            "A: Enter amount using keypad then press Dep\n\n" +
+                            "Q: How do I logout?\n" +
+                            "A: Press Fin when logged in\n\n" +
+                            "Q: How do I create an account?\n" +
+                            "A: Press New on the welcome screen\n\n" +
+                            "================================\n" +
+                            "COMING SOON\n" +
+                            "================================\n\n" +
+                            "Q: How many PIN attempts are allowed?\n" +
+                            "A: Coming soon\n\n" +
+                            "Q: What denominations can be dispensed?\n" +
+                            "A: Coming soon\n\n" +
+                            "Q: How are failed transactions reversed?\n" +
+                            "A: Coming soon\n\n" +
+                            "Q: How do I get a receipt?\n" +
+                            "A: Coming soon\n\n" +
+                            "Q: What if the machine times out?\n" +
+                            "A: Coming soon\n\n" +
+                            "Q: Is audio guidance available?\n" +
+                            "A: Coming soon\n\n" +
+                            "Q: Can text be enlarged or high-contrast?\n" +
+                            "A: Coming soon\n\n" +
+                            "Q: Is there a simple mode for older users?\n" +
+                            "A: Coming soon\n\n" +
+                            "Q: Accessibility support?\n" +
+                            "A: Coming soon"
+            );
+            faqText.setEditable(false);
+            faqText.setWrapText(true);
+            faqText.setPrefSize(400, 500);
+            faqText.setStyle("-fx-font-family: 'Courier New'; -fx-font-size: 12px;");
+            faqStage.setScene(new javafx.scene.Scene(faqText, 420, 520));
+            faqStage.show();
+        });
+
+        grid.add(faqBtn, 0, 4);
+
 
         // add the complete GUI to the window and display it
         Scene scene = new Scene(grid, W, H);
