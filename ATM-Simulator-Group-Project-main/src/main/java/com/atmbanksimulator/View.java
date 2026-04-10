@@ -51,6 +51,7 @@ class View {
 
         taResult = new TextArea();         // text area for instructions, transaction results
         taResult.setEditable(false);       // Read only
+        taResult.setPrefRowCount(12);
         scrollPane  = new ScrollPane();    // create a scrolling window
         scrollPane.setContent(taResult);   // put the text area 'inside' the scrolling window
         grid.add( scrollPane, 0, 2);    // add the scrolling window to GUI on third row
