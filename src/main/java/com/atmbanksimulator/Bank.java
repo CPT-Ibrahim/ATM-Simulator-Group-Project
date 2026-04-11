@@ -9,6 +9,18 @@ import java.sql.SQLException;
 // Handles all DB operations and delegates business rules to account subclasses.
 public class Bank {
 
+    public boolean transferSimple(int amount) {
+        if (loggedInAccount == null || amount <= 0) return false;
+
+        // Use your existing withdraw logic (checks balance/overdrafts)
+        if (loggedInAccount.withdraw(amount)) {
+            // Since we aren't using a DB for the receiver,
+            // we just subtract from the current user.
+            return true;
+        }
+        return false;
+    }
+
     private BankAccount loggedInAccount = null;
 
     // -----------------------------------------------------------------------

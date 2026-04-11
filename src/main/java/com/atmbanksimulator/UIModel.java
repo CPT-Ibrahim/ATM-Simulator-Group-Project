@@ -11,6 +11,8 @@ public class UIModel {
     View view; // Reference to the View (part of the MVC setup)
     private Bank bank; // The ATM communicates with this Bank
 
+    private int loginAttempts = 0; // Simple counter
+
     // The ATM UIModel can be in one of three states:
     // 1. Waiting for an account number
     // 2. Waiting for a password
@@ -123,21 +125,26 @@ public class UIModel {
                 break;
 
             case STATE_PASSWORD:
-                    // Waiting for a password
-                    // Save the typed number as accPasswd, clear numberPadInput,
-                    // then contact the bank to attempt login
                 accPasswd = numberPadInput;
                 numberPadInput = "";
-                if ( bank.login(accNumber, accPasswd) )
-                {
-                    // Successful login: change state to STATE_LOGGED_IN and provide instructions
+
+                if (bank.login(accNumber, accPasswd)) {
+                    loginAttempts = 0; // Reset on success
                     setState(STATE_LOGGED_IN);
                     message = "Logged In";
-                    result = "Now enter the amount\nThen press transaction\n(Dep = Deposit, W/D = Withdraw)";
-                } else {
-                    // Login failed: reset ATM and display error
-                    message = "Login failed: Unknown Account/Password";
-                    reset(message);
+                    result = "Select a transaction";
+                }
+                else {
+                    loginAttempts++; // Increment every failure
+                    if (loginAttempts >= 3) {
+                        message = "LOCKED";
+                        result = "Too many attempts.\nRestart app to try again.";
+                        // We stay in this state or reset to block them
+                        setState(STATE_ACCOUNT_NO);
+                    } else {
+                        message = "Wrong Password (" + loginAttempts + "/3)";
+                        result = "Enter password again:";
+                    }
                 }
                 break;
 
@@ -261,5 +268,21 @@ public class UIModel {
     private void update() {
         view.update(message,numberPadInput, result);
     }
+
+    public void processTransfer() {
+        if (state.equals(STATE_LOGGED_IN)) {
+            int amount = parseValidAmount(numberPadInput);
+            if (amount > 0 && bank.transferSimple(amount)) {
+                message = "Transfer Sent!";
+                result = "£" + amount + " sent to Friend.";
+            } else {
+                message = "Transfer Failed";
+                result = "Check balance or amount.";
+            }
+            numberPadInput = "";
+            update();
+        }
+    }
+
 }
 

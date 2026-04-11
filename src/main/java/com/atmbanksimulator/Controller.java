@@ -38,6 +38,9 @@ public class Controller {
             default:
                 UIModel.processUnknownKey(action);
                 break;
+            case "Xfr":
+                UIModel.processTransfer();
+                break;
         }
     }
 
