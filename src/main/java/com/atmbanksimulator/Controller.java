@@ -35,6 +35,12 @@ public class Controller {
             case "Fin":
                 UIModel.processFinish();
                 break;
+            case "ChP":
+                UIModel.processChangePassword();
+                break;
+            case "New":
+                UIModel.processNewAccount();
+                break;
             default:
                 UIModel.processUnknownKey(action);
                 break;

@@ -16,10 +16,14 @@ public class Bank {
     // -----------------------------------------------------------------------
     public BankAccount makeBankAccount(String accNumber, String accPasswd, int balance, String type) {
         switch (type) {
-            case "student": return new StudentAccount(accNumber, accPasswd, balance);
-            case "prime":   return new PrimeAccount  (accNumber, accPasswd, balance);
-            case "saving":  return new SavingAccount (accNumber, accPasswd, balance);
-            default:        return new BankAccount   (accNumber, accPasswd, balance);
+            case "student":
+                return new StudentAccount(accNumber, accPasswd, balance);
+            case "prime":
+                return new PrimeAccount(accNumber, accPasswd, balance);
+            case "saving":
+                return new SavingAccount(accNumber, accPasswd, balance);
+            default:
+                return new BankAccount(accNumber, accPasswd, balance);
         }
     }
 
@@ -39,7 +43,7 @@ public class Bank {
 
             ps.setString(1, a.getAccNumber());
             ps.setString(2, a.getaccPasswd());
-            ps.setInt   (3, a.getBalance());
+            ps.setInt(3, a.getBalance());
             ps.setString(4, a.getAccountType());
             ps.executeUpdate();
             return true;
@@ -77,8 +81,8 @@ public class Bank {
                 if (rs.next()) {
                     String accNum = rs.getString("acc_number");
                     String accPwd = rs.getString("acc_password");
-                    int    bal    = rs.getInt   ("balance");
-                    String type   = rs.getString("account_type");
+                    int bal = rs.getInt("balance");
+                    String type = rs.getString("account_type");
 
                     // Create the right subclass based on account_type in DB
                     loggedInAccount = makeBankAccount(accNum, accPwd, bal, type);
@@ -97,8 +101,13 @@ public class Bank {
     // -----------------------------------------------------------------------
     // logout / loggedIn helpers
     // -----------------------------------------------------------------------
-    public void logout()      { loggedInAccount = null; }
-    public boolean loggedIn() { return loggedInAccount != null; }
+    public void logout() {
+        loggedInAccount = null;
+    }
+
+    public boolean loggedIn() {
+        return loggedInAccount != null;
+    }
 
     // -----------------------------------------------------------------------
     // fetchLiveBalance – shared helper to get current balance from DB
@@ -140,7 +149,7 @@ public class Bank {
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            ps.setInt   (1, newBalance);
+            ps.setInt(1, newBalance);
             ps.setString(2, loggedInAccount.getAccNumber());
             ps.executeUpdate();
             return true;
@@ -158,7 +167,7 @@ public class Bank {
     // -----------------------------------------------------------------------
     public boolean withdraw(int amount) {
         if (!loggedIn()) return false;
-        if (amount <= 0)  return false;
+        if (amount <= 0) return false;
 
         // Sync live balance from DB into the in-memory object
         int liveBalance = fetchLiveBalance();
@@ -174,7 +183,7 @@ public class Bank {
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            ps.setInt   (1, newBalance);
+            ps.setInt(1, newBalance);
             ps.setString(2, loggedInAccount.getAccNumber());
             ps.executeUpdate();
             return true;
@@ -211,5 +220,33 @@ public class Bank {
     public String getAccountType() {
         if (!loggedIn()) return "none";
         return loggedInAccount.getAccountType();
+    }
+
+
+// changePassword – verifies old password then updates to new one atomically
+    public boolean changePassword(String newPass) {
+        if (!loggedIn()) return false;
+        if (newPass.length() < 6) return false;
+        if (!newPass.matches(".*[A-Za-z].*") || !newPass.matches(".*[0-9].*")) return false;
+
+        String sql = "UPDATE bank_accounts SET acc_password = ? WHERE acc_number = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, newPass);
+            ps.setString(2, loggedInAccount.getAccNumber());
+            int rows = ps.executeUpdate();
+            if (rows > 0) {
+                loggedInAccount.accPasswd = newPass; // keep in-memory in sync
+                return true;
+            }
+            return false;
+        } catch (SQLException e) {
+            System.out.println("Bank.changePassword failed: " + e.getMessage());
+            return false;
+        }
+    }
+    public String getLoggedInPassword() {
+        if (!loggedIn()) return "";
+        return loggedInAccount.getaccPasswd();
     }
 }

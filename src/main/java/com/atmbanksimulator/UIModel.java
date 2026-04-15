@@ -1,93 +1,110 @@
 package com.atmbanksimulator;
 
-// ===== 🧠 UIModel (Brain) =====
-
-// The UIModel represents all the actual content and functionality of the app
-// For the ATM, it keeps track of the information shown in the display
-// (the laMsg and two tfInput boxes), and the interaction with the bank, executes
-// commands provided by the controller and tells the view to update when
-// something changes
 public class UIModel {
-    View view; // Reference to the View (part of the MVC setup)
-    private Bank bank; // The ATM communicates with this Bank
+    View view;
+    private Bank bank;
 
-    // The ATM UIModel can be in one of three states:
-    // 1. Waiting for an account number
-    // 2. Waiting for a password
-    // 3. Logged in (ready to process requests for the logged-in account)
-    // We represent each state with a String constant.
-    // The 'final' keyword ensures these values cannot be changed.
-    private final String STATE_ACCOUNT_NO = "account_no";
-    private final String STATE_PASSWORD = "password";
-    private final String STATE_LOGGED_IN = "logged_in";
+    private final String STATE_ACCOUNT_NO    = "account_no";
+    private final String STATE_PASSWORD      = "password";
+    private final String STATE_LOGGED_IN     = "logged_in";
+    private final String STATE_CHANGE_PW_OLD = "change_pw_old";
+    private final String STATE_CHANGE_PW_NEW = "change_pw_new";
+    private final String STATE_NEW_ACC_NO    = "new_acc_no";
+    private final String STATE_NEW_ACC_PW    = "new_acc_pw";
+    private final String STATE_NEW_ACC_TYPE  = "new_acc_type";
 
-    // Variables representing the state and data of the ATM UIModel
-    private String state = STATE_ACCOUNT_NO;    // Current state of the ATM
-    private String accNumber = "";         // Account number being typed
-    private String accPasswd = "";         // Password being typed
+    private String state        = STATE_ACCOUNT_NO;
+    private String accNumber    = "";
+    private String accPasswd    = "";
+    private String newAccNumber = "";
+    private String newAccPasswd = "";
 
-    // Variables shown on the View display
-    private String message;                // Message label text
-    private String numberPadInput;         // Current number displayed in the TextField (as a string)
-    private String result;                 // Contents of the TextArea (may be multiple lines)
+    private String message;
+    private String numberPadInput;
+    private String result;
 
-    // UIModel constructor: pass a Bank object that the ATM interacts with
     public UIModel(Bank bank) {
         this.bank = bank;
     }
 
-    // Initialize the ATM UIModel: this method is called by Main when starting the app
-    // - Set state to STATE_ACCOUNT_NO
-    // - Clear the numberPadInput - numbers displayed in the TextField
-    // - Display the welcome message and user instructions
+    // -----------------------------------------------------------------------
+    // Main menu helper
+    // -----------------------------------------------------------------------
+    private String mainMenu() {
+        return "========================\n" +
+                "  MAIN MENU\n"             +
+                "========================\n" +
+                "  Dep = Deposit\n"         +
+                "  W/D = Withdraw\n"        +
+                "  Bal = Check Balance\n"   +
+                "  ChP = Change Password\n" +
+                "  New = Create Account\n"  +
+                "  Fin = Logout\n"          +
+                "========================";
+    }
+
+    // -----------------------------------------------------------------------
+    // Welcome Page
+    // -----------------------------------------------------------------------
     public void initialise() {
         setState(STATE_ACCOUNT_NO);
         numberPadInput = "";
-        message = "Welcome to the ATM";
-        result = "Enter your account number\nFollowed by \"Ent\"";
+        message = "Welcome to Brighton ATM";
+        result  = "========================\n"       +
+                "  Please enter your\n"            +
+                "  account number\n"               +
+                "  then press \"Ent\"\n"           +
+                "========================\n"       +
+                "  New user? Press \"New\"\n"      +
+                "  to create an account\n"         +
+                "========================\n"       +
+                "  Press ? FAQ for help";
         update();
     }
 
-    // Reset the ATM UIModel after an invalid action or logout:
-    // - Set state to STATE_ACCOUNT_NO
-    // - Clear the numberPadInput
-    // - Display the provided message and user instructions
+    // -----------------------------------------------------------------------
+    // Reset – Goodbye Page on logout, welcome otherwise
+    // -----------------------------------------------------------------------
     private void reset(String msg) {
         setState(STATE_ACCOUNT_NO);
         numberPadInput = "";
         message = msg;
-        result = "Enter your account number\nFollowed by \"Ent\"";
-    }
-
-    // Change the ATM state and print a debug message whenever the state changes
-    private void setState(String newState)
-    {
-        if ( !state.equals(newState) )
-        {
-            String oldState = state;
-            state = newState;
-            System.out.println("UIModel::setState: changed state from "+ oldState + " to " + newState);
+        if (msg.equals("Thank you for using the Bank ATM")) {
+            result = "========================\n"  +
+                    "  Goodbye!\n"               +
+                    "  Have a great day.\n"      +
+                    "========================\n"  +
+                    "  Enter account number\n"   +
+                    "  to start a new session\n" +
+                    "  then press \"Ent\"";
+        } else {
+            result = "========================\n"  +
+                    "  Enter your account\n"     +
+                    "  number using keypad\n"    +
+                    "  then press \"Ent\"\n"     +
+                    "========================\n"  +
+                    "  New user? Press \"New\"\n" +
+                    "  Press ? FAQ for help";
         }
     }
 
-    // These process**** methods are called by the Controller
-    // in response to specific button presses on the GUI.
+    private void setState(String newState) {
+        if (!state.equals(newState)) {
+            System.out.println("UIModel::setState: " + state + " -> " + newState);
+            state = newState;
+        }
+    }
 
-    // Handle a number button press: append the digit to numberPadInput
+    // -----------------------------------------------------------------------
+    // Number / Clear
+    // -----------------------------------------------------------------------
     public void processNumber(String numberOnButton) {
-        // Optional extension:
-        // Improve feedback by showing what the number is being entered for based on the current state.
-        // e.g.  if state is STATE_ACCOUNT_NO, display "Receiving Account Number, Beep 5 received"
         numberPadInput += numberOnButton;
         message = "Beep! " + numberOnButton + " received";
         update();
     }
 
-    // Handle the Clear button: reset the current number stored in numberPadInput
     public void processClear() {
-        // Optional extension:
-        // Improve feedback by showing what was cleared depending on the current state.
-        // e.g. if state is STATE_ACCOUNT_NO, display "Account Number cleared: 123"
         if (!numberPadInput.isEmpty()) {
             numberPadInput = "";
             message = "Input Cleared";
@@ -95,171 +112,319 @@ public class UIModel {
         }
     }
 
-    // Handle the Enter button.
-    // This is a more complex method: pressing Enter causes the ATM to change state,
-    // progressing from STATE_ACCOUNT_NO → STATE_PASSWORD → STATE_LOGGED_IN,
-    // and back to STATE_ACCOUNT_NO when logging out.
-    public void processEnter()
-    {
-        // The action depends on the current ATM state
-        switch ( state )
-        {
+    // -----------------------------------------------------------------------
+    // Enter – handles all states
+    // -----------------------------------------------------------------------
+    public void processEnter() {
+        switch (state) {
+
             case STATE_ACCOUNT_NO:
-                // Waiting for a complete account number
-                // If nothing was entered, reset with "Invalid Account Number"
                 if (numberPadInput.equals("")) {
                     message = "Invalid Account Number";
                     reset(message);
-                }
-                else{
-                    // Save the entered number as accNumber, clear numberPadInput,
-                    // update the state to expect password, and provide instructions
+                } else {
                     accNumber = numberPadInput;
                     numberPadInput = "";
                     setState(STATE_PASSWORD);
                     message = "Account Number Accepted";
-                    result = "Now enter your password\nFollowed by \"Ent\"";
+                    result  = "========================\n" +
+                            "  Now enter your\n"        +
+                            "  password using keypad\n" +
+                            "  then press \"Ent\"\n"    +
+                            "========================\n" +
+                            "  Press ? FAQ for help";
                 }
                 break;
 
             case STATE_PASSWORD:
-                    // Waiting for a password
-                    // Save the typed number as accPasswd, clear numberPadInput,
-                    // then contact the bank to attempt login
                 accPasswd = numberPadInput;
                 numberPadInput = "";
-                if ( bank.login(accNumber, accPasswd) )
-                {
-                    // Successful login: change state to STATE_LOGGED_IN and provide instructions
+                if (bank.login(accNumber, accPasswd)) {
                     setState(STATE_LOGGED_IN);
-                    message = "Logged In";
-                    result = "Now enter the amount\nThen press transaction\n(Dep = Deposit, W/D = Withdraw)";
+                    message = "Logged In Successfully";
+                    result  = mainMenu();
                 } else {
-                    // Login failed: reset ATM and display error
-                    message = "Login failed: Unknown Account/Password";
+                    message = "Login Failed: Unknown Account/Password";
                     reset(message);
+                }
+                break;
+
+            case STATE_CHANGE_PW_OLD:
+                if (numberPadInput.equals("") || !numberPadInput.equals(bank.getLoggedInPassword())) {
+                    numberPadInput = "";
+                    message = "Incorrect Old Password";
+                    setState(STATE_LOGGED_IN);
+                    result  = mainMenu();
+                } else {
+                    numberPadInput = "";
+                    setState(STATE_CHANGE_PW_NEW);
+                    message = "Old Password Verified";
+                    result  = "========================\n"     +
+                            "  Enter NEW password\n"         +
+                            "  (min 6 chars,\n"             +
+                            "  letters + digits)\n"         +
+                            "  then press \"Ent\"\n"        +
+                            "========================";
+                }
+                break;
+
+            case STATE_CHANGE_PW_NEW:
+                String newPw = numberPadInput;
+                numberPadInput = "";
+                if (bank.changePassword(newPw)) {
+                    setState(STATE_LOGGED_IN);
+                    message = "Password Changed Successfully";
+                    result  = mainMenu();
+                } else {
+                    message = "Invalid Password";
+                    result  = "========================\n"  +
+                            "  Enter NEW password\n"     +
+                            "  again\n"                  +
+                            "  (min 6 chars,\n"          +
+                            "  letters + digits)\n"      +
+                            "  then press \"Ent\"\n"     +
+                            "========================";
+                }
+                break;
+
+            case STATE_NEW_ACC_NO:
+                if (numberPadInput.equals("") || numberPadInput.length() < 4) {
+                    message = "Account Number Too Short";
+                    result  = "========================\n" +
+                            "  Re-enter account\n"      +
+                            "  number (min 4 digits)\n" +
+                            "  then press \"Ent\"\n"    +
+                            "========================";
+                } else {
+                    newAccNumber = numberPadInput;
+                    numberPadInput = "";
+                    setState(STATE_NEW_ACC_PW);
+                    message = "Account Number Accepted";
+                    result  = "========================\n"  +
+                            "  Enter a password\n"       +
+                            "  (min 6 chars,\n"          +
+                            "  letters + digits)\n"      +
+                            "  then press \"Ent\"\n"     +
+                            "========================";
+                }
+                break;
+
+            case STATE_NEW_ACC_PW:
+                if (numberPadInput.length() < 6) {
+                    message = "Password Too Short (min 6)";
+                    result  = "========================\n"  +
+                            "  Re-enter password\n"      +
+                            "  (min 6 chars,\n"          +
+                            "  letters + digits)\n"      +
+                            "  then press \"Ent\"\n"     +
+                            "========================";
+                } else {
+                    newAccPasswd = numberPadInput;
+                    numberPadInput = "";
+                    setState(STATE_NEW_ACC_TYPE);
+                    message = "Password Accepted";
+                    result  = "========================\n" +
+                            "  Choose account type:\n"  +
+                            "  1 = Student\n"           +
+                            "  2 = Prime\n"             +
+                            "  3 = Saving\n"            +
+                            "  4 = Standard\n"          +
+                            "  then press \"Ent\"\n"    +
+                            "========================";
+                }
+                break;
+
+            case STATE_NEW_ACC_TYPE:
+                String typeChoice = numberPadInput;
+                numberPadInput = "";
+                String accType;
+                switch (typeChoice) {
+                    case "1": accType = "student"; break;
+                    case "2": accType = "prime";   break;
+                    case "3": accType = "saving";  break;
+                    default:  accType = "standard";
+                }
+                if (bank.addBankAccount(newAccNumber, newAccPasswd, 0, accType)) {
+                    newAccNumber = "";
+                    newAccPasswd = "";
+                    reset("Account Created Successfully");
+                } else {
+                    newAccNumber = "";
+                    newAccPasswd = "";
+                    reset("Account Already Exists or Creation Failed");
                 }
                 break;
 
             case STATE_LOGGED_IN:
             default:
-                // Do nothing for other states (user is already logged in)
-        }
-
-        update(); // Refresh the GUI to show messages and input
-    }
-
-    /**
-     * Parses a string into a valid transaction amount.
-     * - If the string is empty, invalid, or consists only of zeros, returns 0.
-     * - Otherwise, returns the integer value.
-     *
-     * Purpose:
-     * Helper method for validating user-entered amounts in transactions (Deposit, Withdraw, etc.).
-     *
-     * Note: If you later add features like Transfer, this method can be reused.
-     */
-    private int parseValidAmount(String number) {
-        if (number.isEmpty()) {
-            return 0;
-        }
-        try {
-            return Integer.parseInt(number);
-        } catch (NumberFormatException e) {
-            return 0; // Invalid input -> treated as 0
-        }
-    }
-
-    // Handle the Balance button:
-    // - If the user is logged in, retrieve the current balance and update messages/results accordingly
-    // - Otherwise, reset the ATM and display an error message
-    public void processBalance() {
-        if (state.equals(STATE_LOGGED_IN) ) {
-            numberPadInput = "";
-            message = "Balance Available";
-            result = "Your Balance is: " + bank.getBalance();
-        } else {
-            reset("You are not logged in");
+                // no-op
         }
         update();
     }
 
-    // Handle the Withdraw button:
-    // If the user is logged in, attempt to withdraw the amount entered;
-    // otherwise, reset the ATM and display an error message.
-    // Reads the amount from numberPadInput, validates it, and updates messages/results accordingly.
+    // -----------------------------------------------------------------------
+    // Balance
+    // -----------------------------------------------------------------------
+    public void processBalance() {
+        if (state.equals(STATE_LOGGED_IN)) {
+            numberPadInput = "";
+            message = "Balance Available";
+            result  = "========================\n"              +
+                    "  Your balance is:\n"                   +
+                    "  \u00A3" + bank.getBalance() + "\n"   +
+                    "========================\n"              +
+                    "  Dep / W/D / ChP / Fin";
+        } else {
+            reset("You Are Not Logged In");
+        }
+        update();
+    }
+
+    // -----------------------------------------------------------------------
+    // Withdraw
+    // -----------------------------------------------------------------------
     public void processWithdraw() {
         if (state.equals(STATE_LOGGED_IN)) {
             int amount = parseValidAmount(numberPadInput);
-            if (amount > 0) {
-                if(bank.withdraw( amount )){
-                    message = "Withdraw Successful";
-                    result = "Withdrawn: " + numberPadInput;
-                }
-                else{
-                    message = "Withdraw Failed: Insufficient Funds";
-                    result = "Now enter the amount\nThen press transaction\n(Dep = Deposit, W/D = Withdraw)";
-                }
-            }
-            else{
-                message = "Invalid Amount";
-                result = "Now enter the amount\nThen press transaction\n(Dep = Deposit, W/D = Withdraw)";
-            }
             numberPadInput = "";
-        }
-        else {
-            reset("You are not logged in");
+            if (amount > 0) {
+                if (bank.withdraw(amount)) {
+                    message = "Withdrawal Successful";
+                    result  = "========================\n"                       +
+                            "  Withdrawn:\n"                                  +
+                            "  \u00A3" + amount + "\n"                        +
+                            "  New balance:\n"                                +
+                            "  \u00A3" + bank.getBalance() + "\n"            +
+                            "========================\n"                       +
+                            "  Dep / W/D / Bal / Fin";
+                } else {
+                    message = "Withdrawal Failed";
+                    result  = "========================\n"                       +
+                            "  Insufficient funds\n"                          +
+                            "  Balance:\n"                                    +
+                            "  \u00A3" + bank.getBalance() + "\n"            +
+                            "========================\n"                       +
+                            "  Please enter new amount";
+                }
+            } else {
+                message = "Invalid Amount";
+                result  = "========================\n"    +
+                        "  Enter a valid amount\n"     +
+                        "  then press W/D\n"           +
+                        "========================";
+            }
+        } else {
+            reset("You Are Not Logged In");
         }
         update();
     }
 
-    // Handle the Deposit button:
-    // - If the user is logged in, deposit the amount entered into the bank
-    // - Reads the amount from numberPadInput, validates it, and updates messages/results accordingly
-    // - Otherwise, reset the ATM and display an error message
+    // -----------------------------------------------------------------------
+    // Deposit
+    // -----------------------------------------------------------------------
     public void processDeposit() {
         if (state.equals(STATE_LOGGED_IN)) {
             int amount = parseValidAmount(numberPadInput);
-            if (amount > 0) {
-                bank.deposit( amount );
-                message = "Deposit Successful";
-                result = "Deposited: " + numberPadInput;
-            }
-            else {
-                message = "Invaild Amount";
-                result = "Now enter the amount\nThen press transaction\n(Dep = Deposit, W/D = Withdraw)";
-            }
             numberPadInput = "";
-        }
-        else {
-            reset("You are not logged in");
-        }
-        update();
-    }
-
-    // Handle the Finish button:
-    // - If the user is logged in, log out
-    // - Otherwise, reset the ATM and display an error message
-    public void processFinish() {
-        if (state.equals(STATE_LOGGED_IN) ) {
-            reset("Thank you for using the Bank ATM");
-            bank.logout();
+            if (amount > 0) {
+                bank.deposit(amount);
+                message = "Deposit Successful";
+                result  = "========================\n"                       +
+                        "  Deposited:\n"                                  +
+                        "  \u00A3" + amount + "\n"                        +
+                        "  New balance:\n"                                +
+                        "  \u00A3" + bank.getBalance() + "\n"            +
+                        "========================\n"                       +
+                        "  Dep / W/D / Bal / Fin";
+            } else {
+                message = "Invalid Amount";
+                result  = "========================\n"   +
+                        "  Enter a valid amount\n"    +
+                        "  then press Dep\n"          +
+                        "========================";
+            }
         } else {
-            reset("You are not logged in");
+            reset("You Are Not Logged In");
         }
         update();
     }
 
-    // Handle unknown or invalid buttons for the current state:
-    // - Reset the ATM and display an "Invalid Command" message
+    // -----------------------------------------------------------------------
+    // Change Password
+    // -----------------------------------------------------------------------
+    public void processChangePassword() {
+        if (state.equals(STATE_LOGGED_IN)) {
+            numberPadInput = "";
+            setState(STATE_CHANGE_PW_OLD);
+            message = "Change Password";
+            result  = "========================\n" +
+                    "  Enter your OLD\n"         +
+                    "  password using keypad\n"  +
+                    "  then press \"Ent\"\n"     +
+                    "========================\n" +
+                    "  Press CLR to clear";
+        } else {
+            reset("You Are Not Logged In");
+        }
+        update();
+    }
+
+    // -----------------------------------------------------------------------
+    // New Account
+    // -----------------------------------------------------------------------
+    public void processNewAccount() {
+        if (state.equals(STATE_ACCOUNT_NO)) {
+            numberPadInput = "";
+            newAccNumber = "";
+            newAccPasswd = "";
+            setState(STATE_NEW_ACC_NO);
+            message = "Create New Account";
+            result  = "========================\n"  +
+                    "  Enter a new account\n"     +
+                    "  number (min 4 digits)\n"   +
+                    "  then press \"Ent\"\n"      +
+                    "========================\n"  +
+                    "  Press CLR to clear";
+        } else {
+            reset("Please Log Out First");
+        }
+        update();
+    }
+
+    // -----------------------------------------------------------------------
+    // Finish / Logout
+    // -----------------------------------------------------------------------
+    public void processFinish() {
+        if (state.equals(STATE_LOGGED_IN)) {
+            bank.logout();
+            reset("Thank you for using the Bank ATM");
+        } else {
+            reset("You Are Not Logged In");
+        }
+        update();
+    }
+
+    // -----------------------------------------------------------------------
+    // Unknown key
+    // -----------------------------------------------------------------------
     public void processUnknownKey(String action) {
         reset("Invalid Command");
         update();
     }
 
-    // Notify the View of changes by calling its update method
+    // -----------------------------------------------------------------------
+    // Helpers
+    // -----------------------------------------------------------------------
+    private int parseValidAmount(String number) {
+        if (number.isEmpty()) return 0;
+        try {
+            return Integer.parseInt(number);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
     private void update() {
-        view.update(message,numberPadInput, result);
+        view.update(message, numberPadInput, result);
     }
 }
-
