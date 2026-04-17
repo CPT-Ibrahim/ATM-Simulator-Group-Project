@@ -62,7 +62,7 @@ class View {
         // Define the button layout as a 2D array of text labels.
         // Empty strings ("") represent blank spaces in the grid.
         String buttonTexts[][] = {
-                {"7",   "8",  "9",  "",  "Dep",  ""},
+                {"7",   "8",  "9",  "",  "Dep",  "Tra"},
                 {"4",   "5",  "6",  "",  "W/D",  "New"},
                 {"1",   "2",  "3",  "",  "Bal",  "Fin"},
                 {"CLR", "0",  "",   "",  "ChP",  "Ent"},

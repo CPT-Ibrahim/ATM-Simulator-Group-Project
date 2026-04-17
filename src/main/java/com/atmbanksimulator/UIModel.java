@@ -13,11 +13,18 @@ public class UIModel {
     private final String STATE_NEW_ACC_PW    = "new_acc_pw";
     private final String STATE_NEW_ACC_TYPE  = "new_acc_type";
 
+    // New States for Transfer
+    private final String STATE_TRANSFER_ACC  = "transfer_acc";
+    private final String STATE_TRANSFER_AMT  = "transfer_amt";
+
     private String state        = STATE_ACCOUNT_NO;
     private String accNumber    = "";
     private String accPasswd    = "";
     private String newAccNumber = "";
     private String newAccPasswd = "";
+
+    // Variable to hold destination for transfer
+    private String transferDestAcc = "";
 
     private String message;
     private String numberPadInput;
@@ -36,6 +43,7 @@ public class UIModel {
                 "========================\n" +
                 "  Dep = Deposit\n"         +
                 "  W/D = Withdraw\n"        +
+                "  Tra = Transfer\n"        + // Added Tra to menu
                 "  Bal = Check Balance\n"   +
                 "  ChP = Change Password\n" +
                 "  New = Create Account\n"  +
@@ -144,8 +152,60 @@ public class UIModel {
                     message = "Logged In Successfully";
                     result  = mainMenu();
                 } else {
-                    message = "Login Failed: Unknown Account/Password";
-                    reset(message);
+                    // Check if failure was due to account lock
+                    if (bank.isLocked(accNumber)) {
+                        message = "ACCOUNT LOCKED";
+                        result = "========================\n" +
+                                "  TOO MANY ATTEMPTS!\n"    +
+                                "  This account is locked\n" +
+                                "  until the app restarts.\n" +
+                                "========================\n" +
+                                "  Please contact staff.";
+                        setState(STATE_ACCOUNT_NO);
+                    } else {
+                        message = "Login Failed: Incorrect PIN";
+                        reset(message);
+                    }
+                }
+                break;
+
+            case STATE_TRANSFER_ACC:
+                if (numberPadInput.isEmpty()) {
+                    message = "Enter Target Account";
+                } else {
+                    transferDestAcc = numberPadInput;
+                    numberPadInput = "";
+                    setState(STATE_TRANSFER_AMT);
+                    message = "Transfer to: " + transferDestAcc;
+                    result = "========================\n" +
+                            "  Transfer to: " + transferDestAcc + "\n" +
+                            "  Enter AMOUNT to send\n" +
+                            "  then press \"Ent\"\n" +
+                            "========================";
+                }
+                break;
+
+            case STATE_TRANSFER_AMT:
+                int tAmount = parseValidAmount(numberPadInput);
+                numberPadInput = "";
+                if (bank.transfer(transferDestAcc, tAmount)) {
+                    setState(STATE_LOGGED_IN);
+                    message = "Transfer Successful";
+                    result = "========================\n" +
+                            "  Sent: £" + tAmount + "\n" +
+                            "  To: " + transferDestAcc + "\n" +
+                            "  New Balance: £" + bank.getBalance() + "\n" +
+                            "========================\n" +
+                            "  Bal / Dep / W/D / Fin";
+                } else {
+                    setState(STATE_LOGGED_IN);
+                    message = "Transfer Failed";
+                    result = "========================\n" +
+                            "  TRANSACTION FAILED\n"   +
+                            "  - Check recipient ID\n" +
+                            "  - Check your balance\n" +
+                            "========================\n" +
+                            mainMenu();
                 }
                 break;
 
@@ -258,6 +318,27 @@ public class UIModel {
             case STATE_LOGGED_IN:
             default:
                 // no-op
+        }
+        update();
+    }
+
+    // -----------------------------------------------------------------------
+    // Transfer
+    // -----------------------------------------------------------------------
+    public void processTransfer() {
+        if (state.equals(STATE_LOGGED_IN)) {
+            numberPadInput = "";
+            transferDestAcc = "";
+            setState(STATE_TRANSFER_ACC);
+            message = "Transfer Funds";
+            result  = "========================\n" +
+                    "  Enter DESTINATION\n"      +
+                    "  account number\n"         +
+                    "  then press \"Ent\"\n"     +
+                    "========================\n" +
+                    "  Press CLR to cancel";
+        } else {
+            reset("You Are Not Logged In");
         }
         update();
     }

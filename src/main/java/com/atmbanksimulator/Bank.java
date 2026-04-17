@@ -4,12 +4,18 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 
 // ===== Bank (Service / Business Logic) =====
 // Handles all DB operations and delegates business rules to account subclasses.
 public class Bank {
 
     private BankAccount loggedInAccount = null;
+
+    // In-memory map to track failed login attempts.
+    // This resets automatically when the program is closed.
+    private Map<String, Integer> loginFailures = new HashMap<>();
 
     // -----------------------------------------------------------------------
     // Factory – creates the correct account subclass based on type string
@@ -63,10 +69,17 @@ public class Bank {
     }
 
     // -----------------------------------------------------------------------
-    // login – reads account_type and creates the correct subclass
+    // login – reads account_type and creates the correct subclass.
+    // Includes account locking logic (3 attempts).
     // -----------------------------------------------------------------------
     public boolean login(String accountNumber, String password) {
         logout();
+
+        // 1. Check if the account is already locked in this session
+        if (loginFailures.getOrDefault(accountNumber, 0) >= 3) {
+            System.out.println("Login blocked: Account " + accountNumber + " is locked.");
+            return false;
+        }
 
         String sql = "SELECT acc_number, acc_password, balance, account_type "
                 + "FROM bank_accounts WHERE acc_number = ? AND acc_password = ?";
@@ -79,14 +92,20 @@ public class Bank {
 
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
+                    // Success! Reset failure count for this account
+                    loginFailures.put(accountNumber, 0);
+
                     String accNum = rs.getString("acc_number");
                     String accPwd = rs.getString("acc_password");
                     int bal = rs.getInt("balance");
                     String type = rs.getString("account_type");
 
-                    // Create the right subclass based on account_type in DB
                     loggedInAccount = makeBankAccount(accNum, accPwd, bal, type);
                     return true;
+                } else {
+                    // Credentials wrong: increment failure counter
+                    int currentFailures = loginFailures.getOrDefault(accountNumber, 0);
+                    loginFailures.put(accountNumber, currentFailures + 1);
                 }
             }
 
@@ -96,6 +115,13 @@ public class Bank {
 
         loggedInAccount = null;
         return false;
+    }
+
+    /**
+     * Helper to check if an account is currently locked.
+     */
+    public boolean isLocked(String accNum) {
+        return loginFailures.getOrDefault(accNum, 0) >= 3;
     }
 
     // -----------------------------------------------------------------------
@@ -196,6 +222,42 @@ public class Bank {
     }
 
     // -----------------------------------------------------------------------
+    // transfer – moves money from current account to another
+    // -----------------------------------------------------------------------
+    public boolean transfer(String toAccNum, int amount) {
+        if (!loggedIn() || amount <= 0) return false;
+
+        // Prevent transfer to self
+        if (toAccNum.equals(loggedInAccount.getAccNumber())) return false;
+
+        // 1. Attempt to withdraw from the sender (re-uses withdrawal logic/rules)
+        if (!withdraw(amount)) return false;
+
+        // 2. Attempt to update the recipient's balance in the DB
+        String sql = "UPDATE bank_accounts SET balance = balance + ? WHERE acc_number = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, amount);
+            ps.setString(2, toAccNum);
+            int rowsAffected = ps.executeUpdate();
+
+            if (rowsAffected == 0) {
+                // Target account doesn't exist. Rollback sender's withdrawal.
+                deposit(amount);
+                return false;
+            }
+            return true;
+
+        } catch (SQLException e) {
+            System.out.println("Bank.transfer failed: " + e.getMessage());
+            // SQL error. Rollback sender's withdrawal.
+            deposit(amount);
+            return false;
+        }
+    }
+
+    // -----------------------------------------------------------------------
     // getBalance – always fetches live value from DB
     // -----------------------------------------------------------------------
     public int getBalance() {
@@ -223,7 +285,7 @@ public class Bank {
     }
 
 
-// changePassword – verifies old password then updates to new one atomically
+    // changePassword – verifies old password then updates to new one atomically
     public boolean changePassword(String newPass) {
         if (!loggedIn()) return false;
         if (newPass.length() < 6) return false;
@@ -245,6 +307,7 @@ public class Bank {
             return false;
         }
     }
+
     public String getLoggedInPassword() {
         if (!loggedIn()) return "";
         return loggedInAccount.getaccPasswd();
