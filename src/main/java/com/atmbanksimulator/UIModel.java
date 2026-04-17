@@ -17,6 +17,7 @@ public class UIModel {
     private final String STATE_TRANSFER_ACC  = "transfer_acc";
     private final String STATE_TRANSFER_AMT  = "transfer_amt";
 
+
     private String state        = STATE_ACCOUNT_NO;
     private String accNumber    = "";
     private String accPasswd    = "";
@@ -43,7 +44,7 @@ public class UIModel {
                 "========================\n" +
                 "  Dep = Deposit\n"         +
                 "  W/D = Withdraw\n"        +
-                "  Tra = Transfer\n"        + // Added Tra to menu
+                "  Tra = Transfer\n"        +
                 "  Bal = Check Balance\n"   +
                 "  ChP = Change Password\n" +
                 "  New = Create Account\n"  +
@@ -103,6 +104,14 @@ public class UIModel {
         }
     }
 
+    private void successSound() {
+        SoundPlayer.playSuccess();
+    }
+
+    private void errorSound() {
+        SoundPlayer.playError();
+    }
+
     // -----------------------------------------------------------------------
     // Number / Clear
     // -----------------------------------------------------------------------
@@ -124,17 +133,20 @@ public class UIModel {
     // Enter – handles all states
     // -----------------------------------------------------------------------
     public void processEnter() {
+
         switch (state) {
 
             case STATE_ACCOUNT_NO:
                 if (numberPadInput.equals("")) {
                     message = "Invalid Account Number";
+                    errorSound();
                     reset(message);
                 } else {
                     accNumber = numberPadInput;
                     numberPadInput = "";
                     setState(STATE_PASSWORD);
                     message = "Account Number Accepted";
+                    successSound();
                     result  = "========================\n" +
                             "  Now enter your\n"        +
                             "  password using keypad\n" +
@@ -150,11 +162,13 @@ public class UIModel {
                 if (bank.login(accNumber, accPasswd)) {
                     setState(STATE_LOGGED_IN);
                     message = "Logged In Successfully";
+                    successSound();
                     result  = mainMenu();
                 } else {
                     // Check if failure was due to account lock
                     if (bank.isLocked(accNumber)) {
                         message = "ACCOUNT LOCKED";
+                        errorSound();
                         result = "========================\n" +
                                 "  TOO MANY ATTEMPTS!\n"    +
                                 "  This account is locked\n" +
@@ -164,6 +178,7 @@ public class UIModel {
                         setState(STATE_ACCOUNT_NO);
                     } else {
                         message = "Login Failed: Incorrect PIN";
+                        errorSound();
                         reset(message);
                     }
                 }
@@ -172,11 +187,13 @@ public class UIModel {
             case STATE_TRANSFER_ACC:
                 if (numberPadInput.isEmpty()) {
                     message = "Enter Target Account";
+                    errorSound();
                 } else {
                     transferDestAcc = numberPadInput;
                     numberPadInput = "";
                     setState(STATE_TRANSFER_AMT);
                     message = "Transfer to: " + transferDestAcc;
+                    successSound();
                     result = "========================\n" +
                             "  Transfer to: " + transferDestAcc + "\n" +
                             "  Enter AMOUNT to send\n" +
@@ -191,6 +208,7 @@ public class UIModel {
                 if (bank.transfer(transferDestAcc, tAmount)) {
                     setState(STATE_LOGGED_IN);
                     message = "Transfer Successful";
+                    successSound();
                     result = "========================\n" +
                             "  Sent: £" + tAmount + "\n" +
                             "  To: " + transferDestAcc + "\n" +
@@ -200,6 +218,7 @@ public class UIModel {
                 } else {
                     setState(STATE_LOGGED_IN);
                     message = "Transfer Failed";
+                    errorSound();
                     result = "========================\n" +
                             "  TRANSACTION FAILED\n"   +
                             "  - Check recipient ID\n" +
@@ -213,12 +232,14 @@ public class UIModel {
                 if (numberPadInput.equals("") || !numberPadInput.equals(bank.getLoggedInPassword())) {
                     numberPadInput = "";
                     message = "Incorrect Old Password";
+                    errorSound();
                     setState(STATE_LOGGED_IN);
                     result  = mainMenu();
                 } else {
                     numberPadInput = "";
                     setState(STATE_CHANGE_PW_NEW);
                     message = "Old Password Verified";
+                    successSound();
                     result  = "========================\n"     +
                             "  Enter NEW password\n"         +
                             "  (min 6 chars,\n"             +
@@ -234,9 +255,11 @@ public class UIModel {
                 if (bank.changePassword(newPw)) {
                     setState(STATE_LOGGED_IN);
                     message = "Password Changed Successfully";
+                    successSound();
                     result  = mainMenu();
                 } else {
                     message = "Invalid Password";
+                    errorSound();
                     result  = "========================\n"  +
                             "  Enter NEW password\n"     +
                             "  again\n"                  +
@@ -250,6 +273,7 @@ public class UIModel {
             case STATE_NEW_ACC_NO:
                 if (numberPadInput.equals("") || numberPadInput.length() < 4) {
                     message = "Account Number Too Short";
+                    errorSound();
                     result  = "========================\n" +
                             "  Re-enter account\n"      +
                             "  number (min 4 digits)\n" +
@@ -260,6 +284,7 @@ public class UIModel {
                     numberPadInput = "";
                     setState(STATE_NEW_ACC_PW);
                     message = "Account Number Accepted";
+                    successSound();
                     result  = "========================\n"  +
                             "  Enter a password\n"       +
                             "  (min 6 chars,\n"          +
@@ -272,6 +297,7 @@ public class UIModel {
             case STATE_NEW_ACC_PW:
                 if (numberPadInput.length() < 6) {
                     message = "Password Too Short (min 6)";
+                    errorSound();
                     result  = "========================\n"  +
                             "  Re-enter password\n"      +
                             "  (min 6 chars,\n"          +
@@ -283,6 +309,7 @@ public class UIModel {
                     numberPadInput = "";
                     setState(STATE_NEW_ACC_TYPE);
                     message = "Password Accepted";
+                    successSound();
                     result  = "========================\n" +
                             "  Choose account type:\n"  +
                             "  1 = Student\n"           +
@@ -307,10 +334,12 @@ public class UIModel {
                 if (bank.addBankAccount(newAccNumber, newAccPasswd, 0, accType)) {
                     newAccNumber = "";
                     newAccPasswd = "";
+                    successSound();
                     reset("Account Created Successfully");
                 } else {
                     newAccNumber = "";
                     newAccPasswd = "";
+                    errorSound();
                     reset("Account Already Exists or Creation Failed");
                 }
                 break;
@@ -338,6 +367,7 @@ public class UIModel {
                     "========================\n" +
                     "  Press CLR to cancel";
         } else {
+            errorSound();
             reset("You Are Not Logged In");
         }
         update();
@@ -350,12 +380,14 @@ public class UIModel {
         if (state.equals(STATE_LOGGED_IN)) {
             numberPadInput = "";
             message = "Balance Available";
+            successSound();
             result  = "========================\n"              +
                     "  Your balance is:\n"                   +
                     "  \u00A3" + bank.getBalance() + "\n"   +
                     "========================\n"              +
                     "  Dep / W/D / ChP / Fin";
         } else {
+            errorSound();
             reset("You Are Not Logged In");
         }
         update();
@@ -371,6 +403,7 @@ public class UIModel {
             if (amount > 0) {
                 if (bank.withdraw(amount)) {
                     message = "Withdrawal Successful";
+                    successSound();
                     result  = "========================\n"                       +
                             "  Withdrawn:\n"                                  +
                             "  \u00A3" + amount + "\n"                        +
@@ -380,6 +413,7 @@ public class UIModel {
                             "  Dep / W/D / Bal / Fin";
                 } else {
                     message = "Withdrawal Failed";
+                    errorSound();
                     result  = "========================\n"                       +
                             "  Insufficient funds\n"                          +
                             "  Balance:\n"                                    +
@@ -389,12 +423,14 @@ public class UIModel {
                 }
             } else {
                 message = "Invalid Amount";
+                errorSound();
                 result  = "========================\n"    +
                         "  Enter a valid amount\n"     +
                         "  then press W/D\n"           +
                         "========================";
             }
         } else {
+            errorSound();
             reset("You Are Not Logged In");
         }
         update();
@@ -408,23 +444,34 @@ public class UIModel {
             int amount = parseValidAmount(numberPadInput);
             numberPadInput = "";
             if (amount > 0) {
-                bank.deposit(amount);
-                message = "Deposit Successful";
-                result  = "========================\n"                       +
-                        "  Deposited:\n"                                  +
-                        "  \u00A3" + amount + "\n"                        +
-                        "  New balance:\n"                                +
-                        "  \u00A3" + bank.getBalance() + "\n"            +
-                        "========================\n"                       +
-                        "  Dep / W/D / Bal / Fin";
+                if (bank.deposit(amount)) {
+                    message = "Deposit Successful";
+                    successSound();
+                    result  = "========================\n"                       +
+                            "  Deposited:\n"                                  +
+                            "  \u00A3" + amount + "\n"                        +
+                            "  New balance:\n"                                +
+                            "  \u00A3" + bank.getBalance() + "\n"            +
+                            "========================\n"                       +
+                            "  Dep / W/D / Bal / Fin";
+                } else {
+                    message = "Deposit Failed";
+                    errorSound();
+                    result  = "========================\n"   +
+                            "  Deposit could not be made\n" +
+                            "  Please try again\n"          +
+                            "========================";
+                }
             } else {
                 message = "Invalid Amount";
+                errorSound();
                 result  = "========================\n"   +
                         "  Enter a valid amount\n"    +
                         "  then press Dep\n"          +
                         "========================";
             }
         } else {
+            errorSound();
             reset("You Are Not Logged In");
         }
         update();
@@ -445,6 +492,7 @@ public class UIModel {
                     "========================\n" +
                     "  Press CLR to clear";
         } else {
+            errorSound();
             reset("You Are Not Logged In");
         }
         update();
@@ -467,6 +515,7 @@ public class UIModel {
                     "========================\n"  +
                     "  Press CLR to clear";
         } else {
+            errorSound();
             reset("Please Log Out First");
         }
         update();
@@ -478,10 +527,26 @@ public class UIModel {
     public void processFinish() {
         if (state.equals(STATE_LOGGED_IN)) {
             bank.logout();
+            successSound();
             reset("Thank you for using the Bank ATM");
         } else {
+            errorSound();
             reset("You Are Not Logged In");
         }
+        update();
+    }
+
+    // -----------------------------------------------------------------------
+    // Sound mute toggle
+    // -----------------------------------------------------------------------
+    public void processMuteToggle() {
+        boolean muted = SoundPlayer.toggleMute();
+        message = muted ? "Sounds Muted" : "Sounds Enabled";
+
+        if (!muted) {
+            SoundPlayer.playSuccess();
+        }
+
         update();
     }
 
@@ -489,6 +554,7 @@ public class UIModel {
     // Unknown key
     // -----------------------------------------------------------------------
     public void processUnknownKey(String action) {
+        errorSound();
         reset("Invalid Command");
         update();
     }
@@ -507,5 +573,6 @@ public class UIModel {
 
     private void update() {
         view.update(message, numberPadInput, result);
+        view.setSoundMuted(SoundPlayer.isMuted());
     }
 }

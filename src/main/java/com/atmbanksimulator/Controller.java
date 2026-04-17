@@ -11,10 +11,12 @@ public class Controller {
     // The process method is called by the View in response to user interface events.
     // It uses a switch statement to determine which UIModel method should be called,
     // and delegates the task accordingly.
-    void process( String action ) {
+    void process(String action) {
+        SoundPlayer.playButtonPress();
+
         switch (action) {
-            case "1" : case "2" : case "3" : case "4" : case "5" :
-            case "6" : case "7" : case "8" : case "9" : case "0" :
+            case "1": case "2": case "3": case "4": case "5":
+            case "6": case "7": case "8": case "9": case "0":
                 UIModel.processNumber(action);
                 break;
             case "CLR":
@@ -44,12 +46,15 @@ public class Controller {
             case "Tra":
                 UIModel.processTransfer();
                 break;
+            case "Mut":
+                UIModel.processMuteToggle();
+                break;
+            case "FAQ":
+                // View opens the FAQ window. We only keep the button-click sound here.
+                break;
             default:
                 UIModel.processUnknownKey(action);
                 break;
         }
     }
-
 }
-
-
