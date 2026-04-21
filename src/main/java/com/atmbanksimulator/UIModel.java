@@ -1,5 +1,7 @@
 package com.atmbanksimulator;
 
+import java.util.List;
+
 public class UIModel {
     View view;
     private Bank bank;
@@ -46,6 +48,7 @@ public class UIModel {
                 "  W/D = Withdraw\n"        +
                 "  Tra = Transfer\n"        +
                 "  Bal = Check Balance\n"   +
+                "  Smt = Mini Statement\n"  +
                 "  ChP = Change Password\n" +
                 "  New = Create Account\n"  +
                 "  Fin = Logout\n"          +
@@ -381,11 +384,13 @@ public class UIModel {
             numberPadInput = "";
             message = "Balance Available";
             successSound();
-            result  = "========================\n"              +
-                    "  Your balance is:\n"                   +
-                    "  \u00A3" + bank.getBalance() + "\n"   +
-                    "========================\n"              +
-                    "  Dep / W/D / ChP / Fin";
+            String lowWarn = bank.isLowBalance() ? "\n  !! LOW BALANCE !!\n  Consider depositing funds." : "";
+            result = "========================\n"           +
+                    "  Your balance is:\n"                +
+                    "  \u00A3" + bank.getBalance() + "\n" +
+                    "========================\n"           +
+                    "  Dep / W/D / ChP / Fin"             +
+                    lowWarn;
         } else {
             errorSound();
             reset("You Are Not Logged In");
@@ -393,6 +398,73 @@ public class UIModel {
         update();
     }
 
+
+    // -----------------------------------------------------------------------
+    // Mini Statement
+    // -----------------------------------------------------------------------
+    public void processMiniStatement() {
+        if (state.equals(STATE_LOGGED_IN)) {
+            numberPadInput = "";
+            List<String> txns = bank.getMiniStatement();
+            StringBuilder sb = new StringBuilder();
+            sb.append("========================\n");
+            sb.append("  MINI STATEMENT\n");
+            sb.append("  Last 5 transactions\n");
+            sb.append("========================\n");
+            if (txns.isEmpty()) {
+                sb.append("  No transactions yet.\n");
+            } else {
+                for (int i = 0; i < txns.size(); i++) {
+                    sb.append("  ").append(i + 1).append(". ")
+                            .append(txns.get(i)).append("\n");
+                }
+            }
+            sb.append("========================");
+            if (bank.isLowBalance()) {
+                sb.append("\n  !! LOW BALANCE !!\n");
+                sb.append("  Balance under \u00A350");
+            }
+            message = "Mini Statement";
+            successSound();
+            result = sb.toString();
+        } else {
+            errorSound();
+            reset("You Are Not Logged In");
+        }
+        update();
+    }
+
+    // -----------------------------------------------------------------------
+    // Quick Withdraw
+    // -----------------------------------------------------------------------
+    public void processQuickWithdraw(int amount) {
+        if (state.equals(STATE_LOGGED_IN)) {
+            if (bank.withdraw(amount)) {
+                message = "Withdrawal Successful";
+                successSound();
+                String lowWarn = bank.isLowBalance()
+                        ? "\n  !! LOW BALANCE !!" : "";
+                result = "========================\n"                   +
+                        "  Quick Withdraw: £" + amount + "\n"         +
+                        "  New balance: £" + bank.getBalance() + "\n" +
+                        "========================\n"                   +
+                        "  Dep / W/D / Bal / Fin"                     +
+                        lowWarn;
+            } else {
+                message = "Withdrawal Failed";
+                errorSound();
+                result = "========================\n"               +
+                        "  Insufficient funds\n"                  +
+                        "  Balance: £" + bank.getBalance() + "\n" +
+                        "========================\n"               +
+                        "  Please try a smaller amount";
+            }
+        } else {
+            errorSound();
+            reset("You Are Not Logged In");
+        }
+        update();
+    }
     // -----------------------------------------------------------------------
     // Withdraw
     // -----------------------------------------------------------------------
@@ -574,5 +646,6 @@ public class UIModel {
     private void update() {
         view.update(message, numberPadInput, result);
         view.setSoundMuted(SoundPlayer.isMuted());
+        view.setQuickButtonsVisible(state.equals(STATE_LOGGED_IN));
     }
 }

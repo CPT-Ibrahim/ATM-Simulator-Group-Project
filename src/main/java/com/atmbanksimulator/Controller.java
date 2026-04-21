@@ -52,6 +52,21 @@ public class Controller {
             case "FAQ":
                 // View opens the FAQ window. We only keep the button-click sound here.
                 break;
+            case "Smt":
+                UIModel.processMiniStatement();
+                break;
+            case "W10":
+                UIModel.processQuickWithdraw(10);
+                break;
+            case "W20":
+                UIModel.processQuickWithdraw(20);
+                break;
+            case "W50":
+                UIModel.processQuickWithdraw(50);
+                break;
+            case "W100":
+                UIModel.processQuickWithdraw(100);
+                break;
             default:
                 UIModel.processUnknownKey(action);
                 break;

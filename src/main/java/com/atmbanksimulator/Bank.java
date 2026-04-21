@@ -6,6 +6,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 
 // ===== Bank (Service / Business Logic) =====
 // Handles all DB operations and delegates business rules to account subclasses.
@@ -178,6 +179,7 @@ public class Bank {
             ps.setInt(1, newBalance);
             ps.setString(2, loggedInAccount.getAccNumber());
             ps.executeUpdate();
+            TransactionLogger.log(loggedInAccount.getAccNumber(), "DEPOSIT", amount, newBalance);
             return true;
 
         } catch (SQLException e) {
@@ -212,6 +214,7 @@ public class Bank {
             ps.setInt(1, newBalance);
             ps.setString(2, loggedInAccount.getAccNumber());
             ps.executeUpdate();
+            TransactionLogger.log(loggedInAccount.getAccNumber(), "WITHDRAW", amount, newBalance);
             return true;
 
         } catch (SQLException e) {
@@ -311,5 +314,19 @@ public class Bank {
     public String getLoggedInPassword() {
         if (!loggedIn()) return "";
         return loggedInAccount.getaccPasswd();
+    }
+    // -----------------------------------------------------------------------
+    // getMiniStatement – last 5 transactions for logged-in account
+    // -----------------------------------------------------------------------
+    public List<String> getMiniStatement() {
+        if (!loggedIn()) return new java.util.ArrayList<>();
+        return TransactionLogger.getRecent(loggedInAccount.getAccNumber(), 5);
+    }
+
+    // -----------------------------------------------------------------------
+    // isLowBalance – true if balance is under £50
+    // -----------------------------------------------------------------------
+    public boolean isLowBalance() {
+        return loggedIn() && getBalance() < 50;
     }
 }
