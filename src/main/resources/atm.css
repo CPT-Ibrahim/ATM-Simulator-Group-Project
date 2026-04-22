@@ -1,51 +1,123 @@
+/*
+ * Week 9 - GUI Modernisation Stylesheet
+ * This file restyles the ATM to give it a modern look and feel.
+ */
+
+/* ===== Root Layout & Background ===== */
 #Layout {
-    -fx-grid-lines-visible: false;
-    -fx-hgap: 5;
-    -fx-vgap: 2;
-    -fx-padding: 10;
+    -fx-background-color: linear-gradient(to bottom, #4c5c68, #2c3e50);
+    -fx-padding: 20px;
+    -fx-vgap: 15px;
 }
 
-#Buttons {
-    -fx-pref-columns: 6;
-    -fx-pref-tile-width: 75;
-    -fx-hgap: 5;
-    -fx-vgap: 5;
-}
-
-.button {
-    -fx-font: bold 16pt "courier new";
-}
-
-.label {
-    -fx-font: bold 14pt "Courier New";  /* font size and weight */
-    -fx-text-fill: darkblue;            /* text color */
-}
-
-.text-field {
-    -fx-font: bold 14pt "Courier New"; /* or any font size you want */
-}
-
-.text-area {
-    -fx-font: bold 14pt "Courier New"; /* or any font size you want */
-}
-
-#faqButton {
-    -fx-font: bold 12pt "Courier New";
-    -fx-text-fill: darkblue;
-    -fx-background-color: lightyellow;
-    -fx-border-color: darkblue;
-    -fx-border-width: 1px;
-    -fx-cursor: hand;
-}
-
-#quickBtn {
-    -fx-font: bold 13pt "Courier New";
+/* ===== ATM Screen Styling (Message, Input, Result) ===== */
+#MessageLabel {
+    -fx-font-family: "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
     -fx-text-fill: white;
-    -fx-background-color: darkgreen;
-    -fx-cursor: hand;
-    -fx-pref-width: 100px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.7), 5, 0.0, 0, 1);
 }
 
-#quickBtn:hover {
-    -fx-background-color: green;
+#InputField, #ResultScreen {
+    -fx-font-family: "Consolas", "Courier New", monospace;
+    -fx-font-size: 16px;
+    -fx-background-color: #0d1b2a; /* Dark blue screen background */
+    -fx-border-color: #778da9;
+    -fx-border-width: 3px;
+    -fx-border-radius: 5px;
+    -fx-background-insets: 0;
+}
+
+/* Style the text within the TextFields/TextAreas */
+#InputField .text, #ResultScreen .text {
+    -fx-fill: #e0fbfc; /* Light cyan text for a digital look */
+}
+
+/* Style the scroll pane that contains the result area */
+#ResultScrollPane {
+    -fx-background-color: transparent;
+    -fx-border-color: #778da9;
+    -fx-border-width: 3px;
+    -fx-border-radius: 5px;
+}
+
+#ResultScreen .content {
+    -fx-background-color: #0d1b2a;
+}
+
+
+/* ===== General Button Styling ===== */
+.atm-button {
+    -fx-font-family: "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-border-width: 2px;
+    -fx-min-width: 65px;
+    -fx-min-height: 55px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 10, 0, 0, 3);
+    -fx-transition: all 0.1s ease-in-out;
+}
+.atm-button:hover {
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+.atm-button:pressed {
+    -fx-scale-x: 0.98;
+    -fx-scale-y: 0.98;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 5, 0, 0, 2);
+}
+
+/* ===== Specific Button Colors ===== */
+
+/* Number Pad Buttons (Grey) */
+.keypad-btn {
+    -fx-background-color: linear-gradient(to bottom, #e0e0e0, #b0b0b0);
+    -fx-text-fill: #333;
+    -fx-border-color: #777;
+}
+
+/* Action Buttons (Blue) */
+.action-btn-blue {
+    -fx-background-color: linear-gradient(to bottom, #4da6ff, #0066cc);
+    -fx-text-fill: white;
+    -fx-border-color: #004c99;
+}
+
+/* Go/Confirm Button (Green) */
+.action-btn-green {
+    -fx-background-color: linear-gradient(to bottom, #5cb85c, #4cae4c);
+    -fx-text-fill: white;
+    -fx-border-color: #398439;
+}
+
+/* Cancel/Stop Buttons (Red) */
+.action-btn-red {
+    -fx-background-color: linear-gradient(to bottom, #d9534f, #c9302c);
+    -fx-text-fill: white;
+    -fx-border-color: #ac2925;
+}
+
+
+/* ===== Special Buttons (Quick Withdraw, FAQ, Mute) ===== */
+
+/* Quick Withdraw Buttons */
+#quickBtn {
+    -fx-background-color: linear-gradient(to bottom, #2ecc71, #27ae60);
+    -fx-text-fill: white;
+    -fx-border-color: #1e8449;
+    -fx-font-size: 16px;
+    -fx-min-width: 90px;
+    -fx-pref-height: 45px;
+}
+
+/* FAQ and Mute Buttons */
+#faqButton, #soundButton {
+    -fx-background-color: #6c757d;
+    -fx-text-fill: white;
+    -fx-border-color: #5a6268;
+    -fx-min-width: 120px;
+    -fx-font-size: 14px;
 }
