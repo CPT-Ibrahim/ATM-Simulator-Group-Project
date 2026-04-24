@@ -22,7 +22,7 @@
 #InputField, #ResultScreen {
     -fx-font-family: "Consolas", "Courier New", monospace;
     -fx-font-size: 16px;
-    -fx-background-color: #0d1b2a; /* Dark blue screen background */
+    -fx-background-color: #FFFFFF; /* Dark blue screen background */
     -fx-border-color: #778da9;
     -fx-border-width: 3px;
     -fx-border-radius: 5px;
