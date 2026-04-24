@@ -23,7 +23,7 @@ import java.net.URL;
 class View {
     // Adjusted window size for the new, wider layout
     int H = 700;
-    int W = 580;
+    int W = 460;
 
     Controller controller; // Reference to the Controller (part of the MVC setup)
 
