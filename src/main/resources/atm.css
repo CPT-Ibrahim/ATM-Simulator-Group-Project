@@ -1,123 +1,297 @@
 /*
- * Week 9 - GUI Modernisation Stylesheet
- * This file restyles the ATM to give it a modern look and feel.
+ * Horizon Bank ATM — Coffee Theme Stylesheet
+ * Palette: deep espresso backgrounds, latte/cream text, honey-gold accents
+ * Everything is transparent or semi-transparent so the animated orb
+ * background shows through from beneath.
  */
 
-/* ===== Root Layout & Background ===== */
-#Layout {
-    -fx-background-color: linear-gradient(to bottom, #4c5c68, #2c3e50);
-    -fx-padding: 20px;
-    -fx-vgap: 15px;
+/* ===================================================================
+   ATM Panel — the frosted glass card floating over the background
+=================================================================== */
+#ATMPanel {
+    -fx-background-color: rgba(30, 14, 5, 0.72);
+    -fx-background-radius: 18px;
+    -fx-border-color: rgba(212, 168, 67, 0.55);
+    -fx-border-width: 1.5px;
+    -fx-border-radius: 18px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.75), 40, 0.1, 0, 6);
 }
 
-/* ===== ATM Screen Styling (Message, Input, Result) ===== */
-#MessageLabel {
-    -fx-font-family: "Segoe UI", Arial, sans-serif;
-    -fx-font-size: 18px;
+/* ===================================================================
+   Bank name header
+=================================================================== */
+#BankNameLabel {
+    -fx-font-family: "Georgia";
+    -fx-font-size: 15px;
     -fx-font-weight: bold;
-    -fx-text-fill: white;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.7), 5, 0.0, 0, 1);
+    -fx-text-fill: #D4A843;
+    -fx-letter-spacing: 4px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.8), 6, 0, 0, 1);
+    -fx-alignment: CENTER;
+    -fx-max-width: infinity;
 }
 
-#InputField, #ResultScreen {
-    -fx-font-family: "Consolas", "Courier New", monospace;
+#DividerLabel {
+    -fx-font-family: "Georgia";
+    -fx-font-size: 10px;
+    -fx-text-fill: rgba(212, 168, 67, 0.4);
+    -fx-alignment: CENTER;
+    -fx-max-width: infinity;
+}
+
+/* ===================================================================
+   Message label
+=================================================================== */
+#MessageLabel {
+    -fx-font-family: "Georgia";
+    -fx-font-size: 17px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #F5ECD7;
+    -fx-alignment: CENTER;
+    -fx-max-width: infinity;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.65), 6, 0, 0, 1);
+    -fx-padding: 4 0 4 0;
+}
+
+/* ===================================================================
+   Input field  (number pad entry)
+=================================================================== */
+#InputField {
+    -fx-font-family: "Courier New", monospace;
     -fx-font-size: 16px;
-    -fx-background-color: #FFFFFF; /* Dark blue screen background */
-    -fx-border-color: #778da9;
-    -fx-border-width: 3px;
-    -fx-border-radius: 5px;
+    -fx-font-weight: bold;
+    -fx-background-color: rgba(20, 9, 2, 0.82);
+    -fx-border-color: rgba(212, 168, 67, 0.6);
+    -fx-border-width: 1.5px;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-text-fill: #D4A843;
     -fx-background-insets: 0;
+    -fx-prompt-text-fill: rgba(212, 168, 67, 0.35);
 }
 
-/* Style the text within the TextFields/TextAreas */
-#InputField .text, #ResultScreen .text {
-    -fx-fill: #e0fbfc; /* Light cyan text for a digital look */
+#InputField .text {
+    -fx-fill: #D4A843;
 }
 
-/* Style the scroll pane that contains the result area */
+/* ===================================================================
+   Result screen + scroll pane
+=================================================================== */
 #ResultScrollPane {
     -fx-background-color: transparent;
-    -fx-border-color: #778da9;
-    -fx-border-width: 3px;
-    -fx-border-radius: 5px;
+    -fx-border-color: rgba(212, 168, 67, 0.45);
+    -fx-border-width: 1.5px;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+}
+
+#ResultScrollPane > .viewport {
+    -fx-background-color: transparent;
+}
+
+#ResultScreen {
+    -fx-font-family: "Courier New", monospace;
+    -fx-font-size: 13px;
+    -fx-background-color: rgba(18, 8, 2, 0.80);
+    -fx-text-fill: #F0DFB8;
+    -fx-background-radius: 8px;
+    -fx-background-insets: 0;
+    -fx-highlight-fill: rgba(212, 168, 67, 0.35);
+    -fx-highlight-text-fill: #F5ECD7;
 }
 
 #ResultScreen .content {
-    -fx-background-color:#FFFFFF;
+    -fx-background-color: rgba(18, 8, 2, 0.80);
 }
 
+#ResultScreen .text {
+    -fx-fill: #F0DFB8;
+}
 
-/* ===== General Button Styling ===== */
+/* Scrollbar styling to match theme */
+#ResultScrollPane .scroll-bar {
+    -fx-background-color: rgba(30, 14, 5, 0.5);
+}
+#ResultScrollPane .scroll-bar .thumb {
+    -fx-background-color: rgba(212, 168, 67, 0.45);
+    -fx-background-radius: 4px;
+}
+#ResultScrollPane .scroll-bar .increment-button,
+#ResultScrollPane .scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+}
+
+/* ===================================================================
+   Base ATM button — shared by all button types
+=================================================================== */
 .atm-button {
-    -fx-font-family: "Segoe UI", Arial, sans-serif;
-    -fx-font-size: 18px;
+    -fx-font-family: "Georgia";
+    -fx-font-size: 16px;
     -fx-font-weight: bold;
     -fx-background-radius: 8px;
     -fx-border-radius: 8px;
-    -fx-border-width: 2px;
-    -fx-min-width: 65px;
-    -fx-min-height: 55px;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 10, 0, 0, 3);
-    -fx-transition: all 0.1s ease-in-out;
+    -fx-border-width: 1.5px;
+    -fx-min-width: 64px;
+    -fx-min-height: 52px;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.55), 8, 0.05, 0, 3);
 }
+
 .atm-button:hover {
-    -fx-scale-x: 1.05;
-    -fx-scale-y: 1.05;
+    -fx-scale-x: 1.06;
+    -fx-scale-y: 1.06;
 }
+
 .atm-button:pressed {
-    -fx-scale-x: 0.98;
-    -fx-scale-y: 0.98;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 5, 0, 0, 2);
+    -fx-scale-x: 0.97;
+    -fx-scale-y: 0.97;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.35), 4, 0, 0, 1);
 }
 
-/* ===== Specific Button Colors ===== */
-
-/* Number Pad Buttons (Grey) */
+/* ===================================================================
+   Numpad buttons — warm parchment / latte
+=================================================================== */
 .keypad-btn {
-    -fx-background-color: linear-gradient(to bottom, #e0e0e0, #b0b0b0);
-    -fx-text-fill: #333;
-    -fx-border-color: #777;
+    -fx-background-color: linear-gradient(to bottom,
+    rgba(210, 185, 148, 0.92),
+    rgba(170, 138, 95, 0.92));
+    -fx-text-fill: #2A1508;
+    -fx-border-color: rgba(107, 66, 38, 0.7);
 }
 
-/* Action Buttons (Blue) */
-.action-btn-blue {
-    -fx-background-color: linear-gradient(to bottom, #4da6ff, #0066cc);
-    -fx-text-fill: white;
-    -fx-border-color: #004c99;
+.keypad-btn:hover {
+    -fx-background-color: linear-gradient(to bottom,
+    rgba(235, 215, 178, 0.95),
+    rgba(200, 168, 120, 0.95));
 }
 
-/* Go/Confirm Button (Green) */
+/* ===================================================================
+   Gold action buttons  (Dep, W/D, Bal, Tra, New, Smt, ChP)
+=================================================================== */
+.action-btn-gold {
+    -fx-background-color: linear-gradient(to bottom,
+    rgba(212, 168, 67, 0.90),
+    rgba(160, 120, 40, 0.92));
+    -fx-text-fill: #1E0A02;
+    -fx-border-color: rgba(180, 130, 30, 0.85);
+}
+
+.action-btn-gold:hover {
+    -fx-background-color: linear-gradient(to bottom,
+    rgba(230, 190, 90, 0.95),
+    rgba(185, 145, 55, 0.95));
+}
+
+/* ===================================================================
+   Cream secondary action button  (ChP)
+=================================================================== */
+.action-btn-cream {
+    -fx-background-color: linear-gradient(to bottom,
+    rgba(245, 236, 215, 0.88),
+    rgba(210, 190, 155, 0.88));
+    -fx-text-fill: #3B1F08;
+    -fx-border-color: rgba(160, 120, 70, 0.7);
+}
+
+.action-btn-cream:hover {
+    -fx-background-color: linear-gradient(to bottom,
+    rgba(255, 248, 232, 0.95),
+    rgba(230, 210, 175, 0.95));
+}
+
+/* ===================================================================
+   Green confirm button  (Ent)
+=================================================================== */
 .action-btn-green {
-    -fx-background-color: linear-gradient(to bottom, #5cb85c, #4cae4c);
-    -fx-text-fill: white;
-    -fx-border-color: #398439;
+    -fx-background-color: linear-gradient(to bottom,
+    rgba(82, 170, 82, 0.90),
+    rgba(55, 120, 55, 0.92));
+    -fx-text-fill: #F5ECD7;
+    -fx-border-color: rgba(40, 100, 40, 0.80);
 }
 
-/* Cancel/Stop Buttons (Red) */
+.action-btn-green:hover {
+    -fx-background-color: linear-gradient(to bottom,
+    rgba(100, 195, 100, 0.95),
+    rgba(70, 145, 70, 0.95));
+}
+
+/* ===================================================================
+   Red cancel/danger buttons  (CLR, Fin)
+=================================================================== */
 .action-btn-red {
-    -fx-background-color: linear-gradient(to bottom, #d9534f, #c9302c);
-    -fx-text-fill: white;
-    -fx-border-color: #ac2925;
+    -fx-background-color: linear-gradient(to bottom,
+    rgba(200, 70, 60, 0.90),
+    rgba(150, 40, 35, 0.92));
+    -fx-text-fill: #F5ECD7;
+    -fx-border-color: rgba(120, 30, 25, 0.80);
 }
 
+.action-btn-red:hover {
+    -fx-background-color: linear-gradient(to bottom,
+    rgba(225, 90, 78, 0.95),
+    rgba(175, 55, 48, 0.95));
+}
 
-/* ===== Special Buttons (Quick Withdraw, FAQ, Mute) ===== */
-
-/* Quick Withdraw Buttons */
+/* ===================================================================
+   Quick withdraw buttons  (£10 £20 £50 £100)
+=================================================================== */
 #quickBtn {
-    -fx-background-color: linear-gradient(to bottom, #2ecc71, #27ae60);
-    -fx-text-fill: white;
-    -fx-border-color: #1e8449;
-    -fx-font-size: 16px;
-    -fx-min-width: 90px;
-    -fx-pref-height: 45px;
+    -fx-background-color: linear-gradient(to bottom,
+    rgba(212, 168, 67, 0.85),
+    rgba(155, 110, 25, 0.88));
+    -fx-text-fill: #1E0A02;
+    -fx-border-color: rgba(170, 125, 30, 0.75);
+    -fx-font-family: "Georgia";
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-border-width: 1.5px;
+    -fx-min-width: 82px;
+    -fx-pref-height: 40px;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 6, 0, 0, 2);
 }
 
-/* FAQ and Mute Buttons */
+#quickBtn:hover {
+    -fx-scale-x: 1.06;
+    -fx-scale-y: 1.06;
+    -fx-background-color: linear-gradient(to bottom,
+    rgba(235, 195, 90, 0.95),
+    rgba(180, 135, 45, 0.95));
+}
+
+#quickBtn:pressed {
+    -fx-scale-x: 0.97;
+    -fx-scale-y: 0.97;
+}
+
+/* ===================================================================
+   FAQ and Mute buttons
+=================================================================== */
 #faqButton, #soundButton {
-    -fx-background-color: #6c757d;
-    -fx-text-fill: white;
-    -fx-border-color: #5a6268;
-    -fx-min-width: 120px;
-    -fx-font-size: 14px;
+    -fx-font-family: "Georgia";
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-background-color: rgba(107, 66, 38, 0.72);
+    -fx-text-fill: #F5ECD7;
+    -fx-border-color: rgba(212, 168, 67, 0.55);
+    -fx-border-width: 1.5px;
+    -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+    -fx-min-width: 110px;
+    -fx-pref-height: 32px;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 5, 0, 0, 1);
+}
+
+#faqButton:hover, #soundButton:hover {
+    -fx-background-color: rgba(140, 88, 50, 0.88);
+    -fx-text-fill: #D4A843;
+}
+
+#faqButton:pressed, #soundButton:pressed {
+    -fx-scale-x: 0.97;
+    -fx-scale-y: 0.97;
 }

@@ -1,234 +1,242 @@
 package com.atmbanksimulator;
 
+import javafx.animation.AnimationTimer;
 import javafx.event.ActionEvent;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
-import javafx.scene.control.Tooltip;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
+import javafx.scene.paint.*;
 import javafx.stage.Stage;
+
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
-// ===== 🙂 View (Eyes / Ears / Nose / Mouth / Face) =====
-
-// The View class creates the GUI for the application.
-// It does not know anything about business logic;
-// it only updates the display when notified by the UIModel.
+// ===== View (Eyes / Ears / Nose / Mouth / Face) =====
+// Carries the animated warm-coffee background throughout the entire ATM session.
 class View {
-    // Adjusted window size for the new, wider layout
-    int H = 700;
-    int W = 460;
 
-    Controller controller; // Reference to the Controller (part of the MVC setup)
+    // Window dimensions — wider to breathe with the new theme
+    int H = 720;
+    int W = 520;
 
-    private Label laMsg;
+    Controller controller;
+
+    private Label     laMsg;
     private TextField tfInput;
-    private TextArea taResult;
-    private Button soundBtn;
-    private Button quick10;
-    private Button quick20;
-    private Button quick50;
-    private Button quick100;
+    private TextArea  taResult;
+    private Button    soundBtn;
+    private Button    quick10, quick20, quick50, quick100;
 
+    // Background animation state (shared with WelcomeScreen palette)
+    private Canvas        bgCanvas;
+    private AnimationTimer orbTimer;
+    private final List<Orb> orbs = new ArrayList<>();
+    private final Random rng = new Random(99); // different seed → slightly different drift
+
+    // -----------------------------------------------------------------------
+    // start()
+    // -----------------------------------------------------------------------
     public void start(Stage window) {
-        GridPane grid = new GridPane();
-        grid.setId("Layout");
 
-        laMsg = new Label("Welcome to Bank-ATM");
+        // ── Background canvas (fills the whole window) ──────────────────────
+        bgCanvas = new Canvas(W, H);
+        initOrbs();
+        startOrbAnimation();
+
+        // ── ATM panel: semi-transparent card floating over the background ────
+        VBox atmPanel = buildATMPanel();
+
+        // ── Root: canvas behind, panel on top ───────────────────────────────
+        StackPane root = new StackPane(bgCanvas, atmPanel);
+        root.setPrefSize(W, H);
+
+        Scene scene = new Scene(root, W, H);
+
+        // Load CSS for fine-grained control of JavaFX controls
+        URL cssUrl = getClass().getResource("/atm.css");
+        if (cssUrl != null) {
+            scene.getStylesheets().add(cssUrl.toExternalForm());
+        } else {
+            System.err.println("[View] Warning: atm.css not found in resources.");
+        }
+
+        window.setScene(scene);
+        window.setTitle("Horizon Bank™ ATM");
+        window.setWidth(W);
+        window.setHeight(H);
+        window.setResizable(false);
+        window.show();
+    }
+
+    // -----------------------------------------------------------------------
+    // Build the main ATM panel (semi-transparent, rounded card)
+    // -----------------------------------------------------------------------
+    private VBox buildATMPanel() {
+
+        // ── Bank name header ─────────────────────────────────────────────────
+        Label bankLabel = new Label("HORIZON BANK™");
+        bankLabel.setId("BankNameLabel");
+
+        Label divider = new Label("─────────────────────────────");
+        divider.setId("DividerLabel");
+
+        // ── Message label ────────────────────────────────────────────────────
+        laMsg = new Label("Welcome to Horizon Bank");
         laMsg.setId("MessageLabel");
-        grid.add(laMsg, 0, 0);
+        laMsg.setMaxWidth(Double.MAX_VALUE);
 
+        // ── Input field ──────────────────────────────────────────────────────
         tfInput = new TextField();
         tfInput.setEditable(false);
         tfInput.setId("InputField");
-        grid.add(tfInput, 0, 1);
+        tfInput.setMaxWidth(Double.MAX_VALUE);
 
+        // ── Result screen + scroll pane ──────────────────────────────────────
         taResult = new TextArea();
         taResult.setEditable(false);
-        taResult.setPrefRowCount(12);
+        taResult.setPrefRowCount(10);
         taResult.setId("ResultScreen");
 
-        ScrollPane scrollPane = new ScrollPane();
-        scrollPane.setContent(taResult);
+        ScrollPane scrollPane = new ScrollPane(taResult);
         scrollPane.setFitToWidth(true);
         scrollPane.setId("ResultScrollPane");
-        grid.add(scrollPane, 0, 2);
+        VBox.setVgrow(scrollPane, Priority.ALWAYS);
 
-        // ===================================================================
-        // Button Layout Logic
-        // ===================================================================
+        // ── Button area ──────────────────────────────────────────────────────
+        HBox buttonArea = buildButtonArea();
 
-        // Main container for the entire button area
-        HBox buttonArea = new HBox(15);
-        buttonArea.setAlignment(Pos.CENTER);
+        // ── Quick withdraw row ───────────────────────────────────────────────
+        HBox quickRow = buildQuickRow();
 
-        // --- Left-side action buttons ---
-        VBox leftActions = new VBox(10);
-        leftActions.setAlignment(Pos.CENTER);
-        leftActions.getChildren().addAll(
-                createActionButton("Dep", "action-btn-blue"),
-                createActionButton("W/D", "action-btn-blue"),
-                createActionButton("Bal", "action-btn-blue"),
-                createActionButton("ChP", "action-btn-blue")
+        // ── Bottom utilities (FAQ + Mute) ────────────────────────────────────
+        HBox bottomRow = buildBottomRow();
+
+        // ── Assemble panel ───────────────────────────────────────────────────
+        VBox panel = new VBox(10,
+                bankLabel,
+                divider,
+                laMsg,
+                tfInput,
+                scrollPane,
+                buttonArea,
+                quickRow,
+                bottomRow
         );
+        panel.setId("ATMPanel");
+        panel.setPadding(new Insets(20, 22, 16, 22));
+        panel.setMaxWidth(W - 40);
+        panel.setMaxHeight(H - 40);
+        panel.setAlignment(Pos.TOP_CENTER);
 
-        // --- Center numeric keypad ---
+        StackPane.setAlignment(panel, Pos.CENTER);
+        return panel;
+    }
+
+    // -----------------------------------------------------------------------
+    // Button area (left actions | numpad | right actions)
+    // -----------------------------------------------------------------------
+    private HBox buildButtonArea() {
+        // Left column
+        VBox left = new VBox(9,
+                createActionButton("Dep", "action-btn-gold"),
+                createActionButton("W/D", "action-btn-gold"),
+                createActionButton("Bal", "action-btn-gold"),
+                createActionButton("ChP", "action-btn-cream")
+        );
+        left.setAlignment(Pos.CENTER);
+
+        // Numpad
         GridPane numpad = new GridPane();
-        numpad.setHgap(8);
-        numpad.setVgap(8);
+        numpad.setHgap(7);
+        numpad.setVgap(7);
         numpad.setAlignment(Pos.CENTER);
 
-        // Add number buttons (row by row)
         numpad.add(createNumpadButton("7"), 0, 0);
         numpad.add(createNumpadButton("8"), 1, 0);
         numpad.add(createNumpadButton("9"), 2, 0);
-
         numpad.add(createNumpadButton("4"), 0, 1);
         numpad.add(createNumpadButton("5"), 1, 1);
         numpad.add(createNumpadButton("6"), 2, 1);
-
         numpad.add(createNumpadButton("1"), 0, 2);
         numpad.add(createNumpadButton("2"), 1, 2);
         numpad.add(createNumpadButton("3"), 2, 2);
-
-        // Add control buttons to the numpad's bottom row (USING NEW METHOD HERE)
-        numpad.add(createColoredGridButton("CLR", "action-btn-red"), 0, 3);
-        numpad.add(createNumpadButton("0"), 1, 3);
+        numpad.add(createColoredGridButton("CLR", "action-btn-red"),  0, 3);
+        numpad.add(createNumpadButton("0"),                            1, 3);
         numpad.add(createColoredGridButton("Ent", "action-btn-green"), 2, 3);
 
-        // --- Right-side action buttons ---
-        VBox rightActions = new VBox(10);
-        rightActions.setAlignment(Pos.CENTER);
-        rightActions.getChildren().addAll(
-                createActionButton("Tra", "action-btn-blue"),
-                createActionButton("New", "action-btn-blue"),
-                createActionButton("Smt", "action-btn-blue"),
+        // Right column
+        VBox right = new VBox(9,
+                createActionButton("Tra", "action-btn-gold"),
+                createActionButton("New", "action-btn-gold"),
+                createActionButton("Smt", "action-btn-gold"),
                 createActionButton("Fin", "action-btn-red")
         );
+        right.setAlignment(Pos.CENTER);
 
-        // Add all three sections to the main button area HBox
-        buttonArea.getChildren().addAll(leftActions, numpad, rightActions);
+        HBox area = new HBox(14, left, numpad, right);
+        area.setAlignment(Pos.CENTER);
+        return area;
+    }
 
-        // Add the finished button area to the main grid
-        grid.add(buttonArea, 0, 3);
+    // -----------------------------------------------------------------------
+    // Quick withdraw row
+    // -----------------------------------------------------------------------
+    private HBox buildQuickRow() {
+        quick10  = new Button("£10");
+        quick20  = new Button("£20");
+        quick50  = new Button("£50");
+        quick100 = new Button("£100");
 
-        // ===================================================================
-        // End of Layout Logic
-        // ===================================================================
+        for (Button b : new Button[]{quick10, quick20, quick50, quick100}) {
+            b.setId("quickBtn");
+            b.setVisible(false);
+        }
 
+        quick10.setOnAction(e  -> controller.process("W10"));
+        quick20.setOnAction(e  -> controller.process("W20"));
+        quick50.setOnAction(e  -> controller.process("W50"));
+        quick100.setOnAction(e -> controller.process("W100"));
+
+        HBox row = new HBox(9, quick10, quick20, quick50, quick100);
+        row.setAlignment(Pos.CENTER);
+        return row;
+    }
+
+    // -----------------------------------------------------------------------
+    // Bottom row (FAQ + Mute)
+    // -----------------------------------------------------------------------
+    private HBox buildBottomRow() {
         Button faqBtn = new Button("? FAQ");
         faqBtn.setId("faqButton");
-        Tooltip faqTip = new Tooltip("""
-                Hover tips:
-                Deposit     -> enter amount + Dep
-                Withdraw    -> enter amount + W/D
-                Quick W/D   -> press £10 £20 £50 £100
-                Transfer    -> press Tra
-                Balance     -> press Bal
-                Statement   -> press Smt
-                Password    -> press ChP
-                Logout      -> press Fin
-                Note: whole pounds only, no pence""");
+
+        Tooltip faqTip = new Tooltip(
+                "Deposit  → amount + Dep\n" +
+                        "Withdraw → amount + W/D\n" +
+                        "Quick W/D → £10 £20 £50 £100\n" +
+                        "Transfer → Tra  |  Balance → Bal\n" +
+                        "Statement → Smt  |  Logout → Fin\n" +
+                        "Whole pounds only — no pence"
+        );
         Tooltip.install(faqBtn, faqTip);
 
         faqBtn.setOnAction(e -> {
             controller.process("FAQ");
             Stage faqStage = new Stage();
-            faqStage.setTitle("FAQ - Help");
-            TextArea faqText = new TextArea("""
-                    HOW TO USE THE ATM
-                    ================================
-
-                    Q: How do I withdraw cash?
-                    A: Enter whole pound amount
-                       using keypad then press W/D
-                       e.g. 10, 50, 100
-
-                    Q: How do I use quick withdraw?
-                    A: When logged in, press the
-                       green £10 £20 £50 £100
-                       buttons for instant withdrawal
-
-                    Q: How do I check my balance?
-                    A: Press Bal when logged in
-
-                    Q: How do I change my PIN?
-                    A: Press ChP when logged in
-
-                    Q: How do I deposit?
-                    A: Enter whole pound amount
-                       using keypad then press Dep
-                       e.g. 10, 50, 100
-                       Note: whole pounds only,
-                       no pence accepted
-
-                    Q: How do I logout?
-                    A: Press Fin when logged in
-
-                    Q: How do I create an account?
-                    A: Press New on welcome screen
-
-                    Q: How do I transfer money?
-                    A: Press Tra, enter destination
-                       account number, then amount
-
-                    Q: How do I view my transactions?
-                    A: Press Smt for a mini statement
-                       showing last 5 transactions
-
-                    Q: What is a low balance warning?
-                    A: If balance drops below £50
-                       a warning is shown on screen
-
-                    Q: What denominations are used?
-                    A: The ATM only accepts whole
-                       pound amounts. No pence.
-
-                    Q: How many PIN attempts allowed?
-                    A: You have 3 attempts to enter
-                       your PIN correctly.
-                       After 3 failed attempts your
-                       account will be locked for
-                       the rest of the session.
-                       Restart the app to unlock.
-
-                    ================================
-                    COMING SOON
-                    ================================
-
-                    Q: How are failed transactions
-                       reversed?
-                    A: Coming soon
-
-                    Q: How do I get a receipt?
-                    A: Coming soon
-
-                    Q: What if machine times out?
-                    A: Coming soon
-
-                    Q: Is audio guidance available?
-                    A: Coming soon
-
-                    Q: Can text be enlarged or
-                       high-contrast?
-                    A: Coming soon
-
-                    Q: Is there a simple mode for
-                       older or first-time users?
-                    A: Coming soon
-
-                    Q: Accessibility support?
-                    A: Coming soon""");
+            faqStage.setTitle("FAQ – Horizon Bank ATM");
+            TextArea faqText = new TextArea(FAQ_TEXT);
             faqText.setEditable(false);
             faqText.setWrapText(true);
             faqText.setPrefSize(400, 500);
-            faqText.setStyle("-fx-font-family: 'Courier New'; -fx-font-size: 12px;");
+            faqText.setStyle(
+                    "-fx-font-family: 'Georgia'; -fx-font-size: 12px;" +
+                            "-fx-background-color: #2A1508; -fx-text-fill: #F5ECD7;"
+            );
             faqStage.setScene(new Scene(faqText, 420, 520));
             faqStage.show();
         });
@@ -237,62 +245,22 @@ class View {
         soundBtn.setId("soundButton");
         soundBtn.setOnAction(e -> controller.process("Mut"));
 
-        // Quick withdrawal buttons
-        quick10  = new Button("£10");
-        quick20  = new Button("£20");
-        quick50  = new Button("£50");
-        quick100 = new Button("£100");
-
-        quick10.setId("quickBtn");
-        quick20.setId("quickBtn");
-        quick50.setId("quickBtn");
-        quick100.setId("quickBtn");
-
-        quick10.setOnAction(e -> controller.process("W10"));
-        quick20.setOnAction(e -> controller.process("W20"));
-        quick50.setOnAction(e -> controller.process("W50"));
-        quick100.setOnAction(e -> controller.process("W100"));
-
-        quick10.setVisible(false);
-        quick20.setVisible(false);
-        quick50.setVisible(false);
-        quick100.setVisible(false);
-
-        HBox quickButtons = new HBox(10, quick10, quick20, quick50, quick100);
-        quickButtons.setAlignment(Pos.CENTER);
-        grid.add(quickButtons, 0, 4);
-
-        HBox bottomButtons = new HBox(10, faqBtn, soundBtn);
-        bottomButtons.setAlignment(Pos.CENTER_RIGHT);
-        grid.add(bottomButtons, 0, 5);
-
-        Scene scene = new Scene(grid, W, H);
-        URL cssUrl = this.getClass().getResource("/atm.css");
-        if (cssUrl != null) {
-            scene.getStylesheets().add(cssUrl.toExternalForm());
-        } else {
-            System.err.println("Error: CSS file not found: /atm.css. Make sure it is in your resources folder.");
-        }
-
-        window.setScene(scene);
-        window.setTitle("ATM-Bank Simulator");
-        window.show();
+        HBox row = new HBox(10, faqBtn, soundBtn);
+        row.setAlignment(Pos.CENTER_RIGHT);
+        return row;
     }
 
-    /**
-     * Helper method to create a styled action button (for the side columns).
-     */
+    // -----------------------------------------------------------------------
+    // Button factory helpers
+    // -----------------------------------------------------------------------
     private Button createActionButton(String text, String styleClass) {
         Button btn = new Button(text);
         btn.setOnAction(this::buttonClicked);
         btn.getStyleClass().addAll("atm-button", styleClass);
-        btn.setPrefWidth(90); // Standardize width for outer action buttons
+        btn.setPrefWidth(88);
         return btn;
     }
 
-    /**
-     * Helper method to create a styled numpad button.
-     */
     private Button createNumpadButton(String text) {
         Button btn = new Button(text);
         btn.setOnAction(this::buttonClicked);
@@ -300,33 +268,29 @@ class View {
         return btn;
     }
 
-    /**
-     * Helper method to create a coloured button that perfectly fits the inner numpad grid.
-     */
     private Button createColoredGridButton(String text, String styleClass) {
         Button btn = new Button(text);
         btn.setOnAction(this::buttonClicked);
         btn.getStyleClass().addAll("atm-button", styleClass);
-        // NO setPrefWidth here, so it inherits CSS size and aligns perfectly with numbers.
         return btn;
     }
 
     private void buttonClicked(ActionEvent event) {
-        Button b = (Button) event.getSource();
-        String text = b.getText();
-        controller.process(text);
+        controller.process(((Button) event.getSource()).getText());
     }
 
-    public void update(String msg, String tfInputMsg, String taResultMsg) {
+    // -----------------------------------------------------------------------
+    // Public update hooks called by UIModel
+    // -----------------------------------------------------------------------
+    public void update(String msg, String input, String result) {
         laMsg.setText(msg);
-        tfInput.setText(tfInputMsg);
-        taResult.setText(taResultMsg);
+        tfInput.setText(input);
+        taResult.setText(result);
     }
 
     public void setSoundMuted(boolean muted) {
-        if (soundBtn != null) {
+        if (soundBtn != null)
             soundBtn.setText(muted ? "Unmute Sounds" : "Mute Sounds");
-        }
     }
 
     public void setQuickButtonsVisible(boolean visible) {
@@ -335,4 +299,104 @@ class View {
         quick50.setVisible(visible);
         quick100.setVisible(visible);
     }
+
+    // -----------------------------------------------------------------------
+    // Animated background — same warm-coffee orb system as WelcomeScreen
+    // -----------------------------------------------------------------------
+    private void initOrbs() {
+        String[] colours = {"#C8A882", "#A07850", "#D4A843", "#8B5E3C", "#E8C99A", "#6B4226"};
+        for (int i = 0; i < 7; i++) {
+            Orb o = new Orb();
+            o.x      = rng.nextDouble() * W;
+            o.y      = rng.nextDouble() * H;
+            o.radius = 100 + rng.nextDouble() * 200;
+            o.dx     = (rng.nextDouble() - 0.5) * 0.35;
+            o.dy     = (rng.nextDouble() - 0.5) * 0.35;
+            o.alpha  = 0.16 + rng.nextDouble() * 0.18;
+            o.colour = colours[i % colours.length];
+            orbs.add(o);
+        }
+    }
+
+    private void startOrbAnimation() {
+        GraphicsContext gc = bgCanvas.getGraphicsContext2D();
+        orbTimer = new AnimationTimer() {
+            @Override
+            public void handle(long now) {
+                // Deep espresso base gradient
+                LinearGradient bg = new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE,
+                        new Stop(0.0, Color.web("#3B2314")),
+                        new Stop(0.5, Color.web("#5C3317")),
+                        new Stop(1.0, Color.web("#2A1508")));
+                gc.setFill(bg);
+                gc.fillRect(0, 0, W, H);
+
+                for (Orb o : orbs) {
+                    RadialGradient orbGrad = new RadialGradient(
+                            0, 0,
+                            o.x / W, o.y / H,
+                            o.radius / Math.max(W, H),
+                            true, CycleMethod.NO_CYCLE,
+                            new Stop(0.0, Color.web(o.colour, o.alpha)),
+                            new Stop(1.0, Color.web(o.colour, 0.0))
+                    );
+                    gc.setFill(orbGrad);
+                    gc.fillOval(o.x - o.radius, o.y - o.radius, o.radius * 2, o.radius * 2);
+
+                    o.x += o.dx;
+                    o.y += o.dy;
+                    if (o.x < -o.radius || o.x > W + o.radius) o.dx = -o.dx;
+                    if (o.y < -o.radius || o.y > H + o.radius) o.dy = -o.dy;
+                }
+            }
+        };
+        orbTimer.start();
+    }
+
+    private static class Orb {
+        double x, y, radius, dx, dy, alpha;
+        String colour;
+    }
+
+    // -----------------------------------------------------------------------
+    // FAQ text constant
+    // -----------------------------------------------------------------------
+    private static final String FAQ_TEXT =
+            "HOW TO USE THE ATM\n" +
+                    "================================\n\n" +
+                    "Q: How do I withdraw cash?\n" +
+                    "A: Enter whole pound amount\n" +
+                    "   using keypad then press W/D\n\n" +
+                    "Q: How do I use quick withdraw?\n" +
+                    "A: When logged in, press the\n" +
+                    "   gold £10 £20 £50 £100 buttons\n\n" +
+                    "Q: How do I check my balance?\n" +
+                    "A: Press Bal when logged in\n\n" +
+                    "Q: How do I change my PIN?\n" +
+                    "A: Press ChP when logged in\n\n" +
+                    "Q: How do I deposit?\n" +
+                    "A: Enter whole pound amount\n" +
+                    "   using keypad then press Dep\n\n" +
+                    "Q: How do I logout?\n" +
+                    "A: Press Fin when logged in\n\n" +
+                    "Q: How do I create an account?\n" +
+                    "A: Press New on welcome screen\n\n" +
+                    "Q: How do I transfer money?\n" +
+                    "A: Press Tra, enter destination\n" +
+                    "   account number, then amount\n\n" +
+                    "Q: How do I view my transactions?\n" +
+                    "A: Press Smt for a mini statement\n" +
+                    "   showing last 5 transactions\n\n" +
+                    "Q: What is a low balance warning?\n" +
+                    "A: If balance drops below £50\n" +
+                    "   a warning is shown on screen\n\n" +
+                    "Q: How many PIN attempts allowed?\n" +
+                    "A: You have 3 attempts.\n" +
+                    "   After 3 failures the account\n" +
+                    "   is locked until app restarts.\n\n" +
+                    "================================\n" +
+                    "COMING SOON\n" +
+                    "================================\n" +
+                    "Receipts, timeout, accessibility,\n" +
+                    "audio guidance, high contrast mode.";
 }

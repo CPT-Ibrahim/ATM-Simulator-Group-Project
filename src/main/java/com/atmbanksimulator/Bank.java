@@ -15,7 +15,6 @@ public class Bank {
     private BankAccount loggedInAccount = null;
 
     // In-memory map to track failed login attempts.
-    // This resets automatically when the program is closed.
     private Map<String, Integer> loginFailures = new HashMap<>();
 
     // -----------------------------------------------------------------------
@@ -23,18 +22,13 @@ public class Bank {
     // -----------------------------------------------------------------------
     public BankAccount makeBankAccount(String accNumber, String accPasswd, int balance, String type) {
         switch (type) {
-            case "student":
-                return new StudentAccount(accNumber, accPasswd, balance);
-            case "prime":
-                return new PrimeAccount(accNumber, accPasswd, balance);
-            case "saving":
-                return new SavingAccount(accNumber, accPasswd, balance);
-            default:
-                return new BankAccount(accNumber, accPasswd, balance);
+            case "student": return new StudentAccount(accNumber, accPasswd, balance);
+            case "prime":   return new PrimeAccount(accNumber, accPasswd, balance);
+            case "saving":  return new SavingAccount(accNumber, accPasswd, balance);
+            default:        return new BankAccount(accNumber, accPasswd, balance);
         }
     }
 
-    // Convenience overload – defaults to standard account
     public BankAccount makeBankAccount(String accNumber, String accPasswd, int balance) {
         return makeBankAccount(accNumber, accPasswd, balance, "standard");
     }
@@ -47,14 +41,12 @@ public class Bank {
                 + "(acc_number, acc_password, balance, account_type) VALUES (?, ?, ?, ?)";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-
             ps.setString(1, a.getAccNumber());
             ps.setString(2, a.getaccPasswd());
             ps.setInt(3, a.getBalance());
             ps.setString(4, a.getAccountType());
             ps.executeUpdate();
             return true;
-
         } catch (SQLException e) {
             System.out.println("Bank.addBankAccount failed: " + e.getMessage());
             return false;
@@ -70,13 +62,51 @@ public class Bank {
     }
 
     // -----------------------------------------------------------------------
-    // login – reads account_type and creates the correct subclass.
-    // Includes account locking logic (3 attempts).
+    // loginByUID – NEW: authenticates by NFC card UID instead of
+    // account number + password. Called by NFCServer when a card is tapped.
+    // -----------------------------------------------------------------------
+    public boolean loginByUID(String uid) {
+        logout();
+
+        String sql = "SELECT acc_number, acc_password, balance, account_type "
+                   + "FROM bank_accounts WHERE nfc_uid = ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, uid.trim().toUpperCase());
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    loggedInAccount = makeBankAccount(
+                        rs.getString("acc_number"),
+                        rs.getString("acc_password"),
+                        rs.getInt("balance"),
+                        rs.getString("account_type")
+                    );
+                    System.out.println("[Bank] NFC login success — account: "
+                        + loggedInAccount.getAccNumber()
+                        + " (" + loggedInAccount.getAccountType() + ")");
+                    return true;
+                } else {
+                    System.out.println("[Bank] NFC login failed — UID not found: " + uid);
+                }
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Bank.loginByUID failed: " + e.getMessage());
+        }
+
+        loggedInAccount = null;
+        return false;
+    }
+
+    // -----------------------------------------------------------------------
+    // login – original method kept for backwards compatibility (account number + password)
     // -----------------------------------------------------------------------
     public boolean login(String accountNumber, String password) {
         logout();
 
-        // 1. Check if the account is already locked in this session
         if (loginFailures.getOrDefault(accountNumber, 0) >= 3) {
             System.out.println("Login blocked: Account " + accountNumber + " is locked.");
             return false;
@@ -93,18 +123,15 @@ public class Bank {
 
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    // Success! Reset failure count for this account
                     loginFailures.put(accountNumber, 0);
-
-                    String accNum = rs.getString("acc_number");
-                    String accPwd = rs.getString("acc_password");
-                    int bal = rs.getInt("balance");
-                    String type = rs.getString("account_type");
-
-                    loggedInAccount = makeBankAccount(accNum, accPwd, bal, type);
+                    loggedInAccount = makeBankAccount(
+                        rs.getString("acc_number"),
+                        rs.getString("acc_password"),
+                        rs.getInt("balance"),
+                        rs.getString("account_type")
+                    );
                     return true;
                 } else {
-                    // Credentials wrong: increment failure counter
                     int currentFailures = loginFailures.getOrDefault(accountNumber, 0);
                     loginFailures.put(accountNumber, currentFailures + 1);
                 }
@@ -118,9 +145,6 @@ public class Bank {
         return false;
     }
 
-    /**
-     * Helper to check if an account is currently locked.
-     */
     public boolean isLocked(String accNum) {
         return loginFailures.getOrDefault(accNum, 0) >= 3;
     }
@@ -128,27 +152,20 @@ public class Bank {
     // -----------------------------------------------------------------------
     // logout / loggedIn helpers
     // -----------------------------------------------------------------------
-    public void logout() {
-        loggedInAccount = null;
-    }
-
-    public boolean loggedIn() {
-        return loggedInAccount != null;
-    }
+    public void logout() { loggedInAccount = null; }
+    public boolean loggedIn() { return loggedInAccount != null; }
 
     // -----------------------------------------------------------------------
-    // fetchLiveBalance – shared helper to get current balance from DB
+    // fetchLiveBalance
     // -----------------------------------------------------------------------
     private int fetchLiveBalance() {
         String sql = "SELECT balance FROM bank_accounts WHERE acc_number = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-
             ps.setString(1, loggedInAccount.getAccNumber());
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) return rs.getInt("balance");
             }
-
         } catch (SQLException e) {
             System.out.println("Bank.fetchLiveBalance failed: " + e.getMessage());
         }
@@ -156,144 +173,111 @@ public class Bank {
     }
 
     // -----------------------------------------------------------------------
-    // deposit – syncs live balance, delegates to subclass, then updates DB.
-    // SavingAccount.deposit() will automatically add interest.
+    // deposit
     // -----------------------------------------------------------------------
     public boolean deposit(int amount) {
         if (!loggedIn()) return false;
-
-        // Sync live balance from DB into the in-memory object
         int liveBalance = fetchLiveBalance();
         if (liveBalance == -1) return false;
         loggedInAccount.balance = liveBalance;
-
-        // Delegate to subclass (e.g. SavingAccount adds interest here)
         if (!loggedInAccount.deposit(amount)) return false;
-
         int newBalance = loggedInAccount.getBalance();
-
         String sql = "UPDATE bank_accounts SET balance = ? WHERE acc_number = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-
             ps.setInt(1, newBalance);
             ps.setString(2, loggedInAccount.getAccNumber());
             ps.executeUpdate();
             TransactionLogger.log(loggedInAccount.getAccNumber(), "DEPOSIT", amount, newBalance);
             return true;
-
         } catch (SQLException e) {
             System.out.println("Bank.deposit DB update failed: " + e.getMessage());
-            loggedInAccount.balance = liveBalance; // rollback in-memory
+            loggedInAccount.balance = liveBalance;
             return false;
         }
     }
 
     // -----------------------------------------------------------------------
-    // withdraw – syncs live balance, delegates to subclass, then updates DB.
-    // StudentAccount enforces daily cap, PrimeAccount allows overdraft.
+    // withdraw
     // -----------------------------------------------------------------------
     public boolean withdraw(int amount) {
         if (!loggedIn()) return false;
         if (amount <= 0) return false;
-
-        // Sync live balance from DB into the in-memory object
         int liveBalance = fetchLiveBalance();
         if (liveBalance == -1) return false;
         loggedInAccount.balance = liveBalance;
-
-        // Delegate to subclass (applies specific rules per account type)
         if (!loggedInAccount.withdraw(amount)) return false;
-
         int newBalance = loggedInAccount.getBalance();
-
         String sql = "UPDATE bank_accounts SET balance = ? WHERE acc_number = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-
             ps.setInt(1, newBalance);
             ps.setString(2, loggedInAccount.getAccNumber());
             ps.executeUpdate();
             TransactionLogger.log(loggedInAccount.getAccNumber(), "WITHDRAW", amount, newBalance);
             return true;
-
         } catch (SQLException e) {
             System.out.println("Bank.withdraw DB update failed: " + e.getMessage());
-            loggedInAccount.balance = liveBalance; // rollback in-memory
+            loggedInAccount.balance = liveBalance;
             return false;
         }
     }
 
     // -----------------------------------------------------------------------
-    // transfer – moves money from current account to another
+    // transfer
     // -----------------------------------------------------------------------
     public boolean transfer(String toAccNum, int amount) {
         if (!loggedIn() || amount <= 0) return false;
-
-        // Prevent transfer to self
         if (toAccNum.equals(loggedInAccount.getAccNumber())) return false;
-
-        // 1. Attempt to withdraw from the sender (re-uses withdrawal logic/rules)
         if (!withdraw(amount)) return false;
-
-        // 2. Attempt to update the recipient's balance in the DB
         String sql = "UPDATE bank_accounts SET balance = balance + ? WHERE acc_number = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-
             ps.setInt(1, amount);
             ps.setString(2, toAccNum);
             int rowsAffected = ps.executeUpdate();
-
             if (rowsAffected == 0) {
-                // Target account doesn't exist. Rollback sender's withdrawal.
                 deposit(amount);
                 return false;
             }
             return true;
-
         } catch (SQLException e) {
             System.out.println("Bank.transfer failed: " + e.getMessage());
-            // SQL error. Rollback sender's withdrawal.
             deposit(amount);
             return false;
         }
     }
 
     // -----------------------------------------------------------------------
-    // getBalance – always fetches live value from DB
+    // getBalance
     // -----------------------------------------------------------------------
     public int getBalance() {
         if (!loggedIn()) return -1;
-
         String sql = "SELECT balance FROM bank_accounts WHERE acc_number = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-
             ps.setString(1, loggedInAccount.getAccNumber());
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) return rs.getInt("balance");
             }
-
         } catch (SQLException e) {
             System.out.println("Bank.getBalance failed: " + e.getMessage());
         }
         return -1;
     }
 
-    // Returns the account type of the logged-in user (useful for UI display)
     public String getAccountType() {
         if (!loggedIn()) return "none";
         return loggedInAccount.getAccountType();
     }
 
-
-    // changePassword – verifies old password then updates to new one atomically
+    // -----------------------------------------------------------------------
+    // changePassword
+    // -----------------------------------------------------------------------
     public boolean changePassword(String newPass) {
         if (!loggedIn()) return false;
         if (newPass.length() < 6) return false;
         if (!newPass.matches(".*[A-Za-z].*") || !newPass.matches(".*[0-9].*")) return false;
-
         String sql = "UPDATE bank_accounts SET acc_password = ? WHERE acc_number = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -301,7 +285,7 @@ public class Bank {
             ps.setString(2, loggedInAccount.getAccNumber());
             int rows = ps.executeUpdate();
             if (rows > 0) {
-                loggedInAccount.accPasswd = newPass; // keep in-memory in sync
+                loggedInAccount.accPasswd = newPass;
                 return true;
             }
             return false;
@@ -315,8 +299,9 @@ public class Bank {
         if (!loggedIn()) return "";
         return loggedInAccount.getaccPasswd();
     }
+
     // -----------------------------------------------------------------------
-    // getMiniStatement – last 5 transactions for logged-in account
+    // getMiniStatement
     // -----------------------------------------------------------------------
     public List<String> getMiniStatement() {
         if (!loggedIn()) return new java.util.ArrayList<>();
@@ -324,7 +309,7 @@ public class Bank {
     }
 
     // -----------------------------------------------------------------------
-    // isLowBalance – true if balance is under £50
+    // isLowBalance
     // -----------------------------------------------------------------------
     public boolean isLowBalance() {
         return loggedIn() && getBalance() < 50;

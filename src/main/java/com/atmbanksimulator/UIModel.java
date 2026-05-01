@@ -1,12 +1,13 @@
 package com.atmbanksimulator;
 
+import javafx.application.Platform;
 import java.util.List;
 
 public class UIModel {
     View view;
     private Bank bank;
 
-    private final String STATE_ACCOUNT_NO    = "account_no";
+    private final String STATE_ACCOUNT_NO    = "account_no";   // now means "waiting for NFC tap"
     private final String STATE_PASSWORD      = "password";
     private final String STATE_LOGGED_IN     = "logged_in";
     private final String STATE_CHANGE_PW_OLD = "change_pw_old";
@@ -14,19 +15,14 @@ public class UIModel {
     private final String STATE_NEW_ACC_NO    = "new_acc_no";
     private final String STATE_NEW_ACC_PW    = "new_acc_pw";
     private final String STATE_NEW_ACC_TYPE  = "new_acc_type";
-
-    // New States for Transfer
     private final String STATE_TRANSFER_ACC  = "transfer_acc";
     private final String STATE_TRANSFER_AMT  = "transfer_amt";
-
 
     private String state        = STATE_ACCOUNT_NO;
     private String accNumber    = "";
     private String accPasswd    = "";
     private String newAccNumber = "";
     private String newAccPasswd = "";
-
-    // Variable to hold destination for transfer
     private String transferDestAcc = "";
 
     private String message;
@@ -56,26 +52,61 @@ public class UIModel {
     }
 
     // -----------------------------------------------------------------------
-    // Welcome Page
+    // Welcome screen — now shows NFC tap prompt instead of account number
     // -----------------------------------------------------------------------
     public void initialise() {
         setState(STATE_ACCOUNT_NO);
         numberPadInput = "";
         message = "Welcome to Brighton ATM";
-        result  = "========================\n"       +
-                "  Please enter your\n"            +
-                "  account number\n"               +
-                "  then press \"Ent\"\n"           +
-                "========================\n"       +
-                "  New user? Press \"New\"\n"      +
-                "  to create an account\n"         +
-                "========================\n"       +
+        result  = "========================\n"    +
+                "  Tap your NFC card\n"          +
+                "  on your phone to\n"           +
+                "  log in\n"                     +
+                "========================\n"      +
+                "  New user? Press \"New\"\n"    +
+                "  to create an account\n"       +
+                "========================\n"      +
                 "  Press ? FAQ for help";
         update();
     }
 
     // -----------------------------------------------------------------------
-    // Reset – Goodbye Page on logout, welcome otherwise
+    // processNFCLogin — called by NFCServer when a card is tapped.
+    // Runs on JavaFX thread via Platform.runLater so it can update the UI.
+    // -----------------------------------------------------------------------
+    public void processNFCLogin(String uid) {
+        Platform.runLater(() -> {
+            System.out.println("[UIModel] NFC login attempt — UID: " + uid);
+
+            if (bank.loginByUID(uid)) {
+                setState(STATE_LOGGED_IN);
+                numberPadInput = "";
+                message = "Card Authenticated  ✓";
+                successSound();
+                result  = "========================\n"  +
+                        "  Welcome!\n"                 +
+                        "  Account: " + bank.getAccountType().toUpperCase() + "\n" +
+                        "========================\n"  +
+                        mainMenu();
+            } else {
+                message = "Card Not Recognised";
+                errorSound();
+                result  = "========================\n" +
+                        "  This card is not\n"       +
+                        "  linked to any account\n"  +
+                        "========================\n"  +
+                        "  Please contact your\n"    +
+                        "  bank to register\n"       +
+                        "  your card\n"              +
+                        "========================\n"  +
+                        "  Tap again to retry";
+            }
+            update();
+        });
+    }
+
+    // -----------------------------------------------------------------------
+    // Reset – updated to show NFC tap prompt instead of account number entry
     // -----------------------------------------------------------------------
     private void reset(String msg) {
         setState(STATE_ACCOUNT_NO);
@@ -86,14 +117,13 @@ public class UIModel {
                     "  Goodbye!\n"               +
                     "  Have a great day.\n"      +
                     "========================\n"  +
-                    "  Enter account number\n"   +
-                    "  to start a new session\n" +
-                    "  then press \"Ent\"";
+                    "  Tap your NFC card\n"      +
+                    "  to start a new session";
         } else {
             result = "========================\n"  +
-                    "  Enter your account\n"     +
-                    "  number using keypad\n"    +
-                    "  then press \"Ent\"\n"     +
+                    "  Tap your NFC card\n"      +
+                    "  on your phone to\n"       +
+                    "  log in\n"                 +
                     "========================\n"  +
                     "  New user? Press \"New\"\n" +
                     "  Press ? FAQ for help";
@@ -107,13 +137,8 @@ public class UIModel {
         }
     }
 
-    private void successSound() {
-        SoundPlayer.playSuccess();
-    }
-
-    private void errorSound() {
-        SoundPlayer.playError();
-    }
+    private void successSound() { SoundPlayer.playSuccess(); }
+    private void errorSound()   { SoundPlayer.playError(); }
 
     // -----------------------------------------------------------------------
     // Number / Clear
@@ -133,33 +158,22 @@ public class UIModel {
     }
 
     // -----------------------------------------------------------------------
-    // Enter – handles all states
+    // Enter – STATE_ACCOUNT_NO and STATE_PASSWORD are kept for the
+    // "Create Account" flow which still uses the keypad.
+    // NFC login bypasses both these states entirely.
     // -----------------------------------------------------------------------
     public void processEnter() {
-
         switch (state) {
 
             case STATE_ACCOUNT_NO:
-                if (numberPadInput.equals("")) {
-                    message = "Invalid Account Number";
-                    errorSound();
-                    reset(message);
-                } else {
-                    accNumber = numberPadInput;
-                    numberPadInput = "";
-                    setState(STATE_PASSWORD);
-                    message = "Account Number Accepted";
-                    successSound();
-                    result  = "========================\n" +
-                            "  Now enter your\n"        +
-                            "  password using keypad\n" +
-                            "  then press \"Ent\"\n"    +
-                            "========================\n" +
-                            "  Press ? FAQ for help";
-                }
+                // In NFC mode, pressing Ent on the welcome screen does nothing
+                // (user must tap card). Only the new-account flow uses keypad entry.
+                message = "Please tap your NFC card";
+                errorSound();
                 break;
 
             case STATE_PASSWORD:
+                // Kept in case of fallback manual login — not used in NFC mode
                 accPasswd = numberPadInput;
                 numberPadInput = "";
                 if (bank.login(accNumber, accPasswd)) {
@@ -168,7 +182,6 @@ public class UIModel {
                     successSound();
                     result  = mainMenu();
                 } else {
-                    // Check if failure was due to account lock
                     if (bank.isLocked(accNumber)) {
                         message = "ACCOUNT LOCKED";
                         errorSound();
@@ -384,7 +397,8 @@ public class UIModel {
             numberPadInput = "";
             message = "Balance Available";
             successSound();
-            String lowWarn = bank.isLowBalance() ? "\n  !! LOW BALANCE !!\n  Consider depositing funds." : "";
+            String lowWarn = bank.isLowBalance()
+                ? "\n  !! LOW BALANCE !!\n  Consider depositing funds." : "";
             result = "========================\n"           +
                     "  Your balance is:\n"                +
                     "  \u00A3" + bank.getBalance() + "\n" +
@@ -397,7 +411,6 @@ public class UIModel {
         }
         update();
     }
-
 
     // -----------------------------------------------------------------------
     // Mini Statement
@@ -442,8 +455,7 @@ public class UIModel {
             if (bank.withdraw(amount)) {
                 message = "Withdrawal Successful";
                 successSound();
-                String lowWarn = bank.isLowBalance()
-                        ? "\n  !! LOW BALANCE !!" : "";
+                String lowWarn = bank.isLowBalance() ? "\n  !! LOW BALANCE !!" : "";
                 result = "========================\n"                   +
                         "  Quick Withdraw: £" + amount + "\n"         +
                         "  New balance: £" + bank.getBalance() + "\n" +
@@ -465,6 +477,7 @@ public class UIModel {
         }
         update();
     }
+
     // -----------------------------------------------------------------------
     // Withdraw
     // -----------------------------------------------------------------------
@@ -614,11 +627,7 @@ public class UIModel {
     public void processMuteToggle() {
         boolean muted = SoundPlayer.toggleMute();
         message = muted ? "Sounds Muted" : "Sounds Enabled";
-
-        if (!muted) {
-            SoundPlayer.playSuccess();
-        }
-
+        if (!muted) SoundPlayer.playSuccess();
         update();
     }
 
