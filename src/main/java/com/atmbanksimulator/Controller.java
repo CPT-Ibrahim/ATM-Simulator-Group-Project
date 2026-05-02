@@ -48,6 +48,9 @@ public class Controller {
             case "Mut":
                 UIModel.processMuteToggle();
                 break;
+            case "Go Back":
+                UIModel.processGoBack();
+                break;
             case "FAQ":
                 // View opens FAQ window; sound already played above.
                 break;

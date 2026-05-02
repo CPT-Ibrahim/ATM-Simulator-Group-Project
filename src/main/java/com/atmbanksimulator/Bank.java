@@ -276,8 +276,9 @@ public class Bank {
     // -----------------------------------------------------------------------
     public boolean changePassword(String newPass) {
         if (!loggedIn()) return false;
-        if (newPass.length() < 6) return false;
-        if (!newPass.matches(".*[A-Za-z].*") || !newPass.matches(".*[0-9].*")) return false;
+        // The UI is an ATM keypad, so the credential is treated as a numeric PIN.
+        // Minimum 4 digits keeps the Change PIN flow compatible with the numpad.
+        if (newPass == null || !newPass.matches("\\d{4,}")) return false;
         String sql = "UPDATE bank_accounts SET acc_password = ? WHERE acc_number = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

@@ -32,7 +32,7 @@ public class DBConnection {
     private static final boolean DEBUG = true;
 
     // Toggle this ON/OFF to show or hide the database inspector window.
-    public static boolean DB_INSPECTOR_ENABLED = true;
+    public static boolean DB_INSPECTOR_ENABLED = false;
 
     private static Stage inspectorStage;
 
