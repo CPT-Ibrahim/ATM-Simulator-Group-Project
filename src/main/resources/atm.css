@@ -1,12 +1,12 @@
 /*
  * Horizon Bank ATM — Coffee Theme Stylesheet
- * Palette: deep espresso backgrounds, latte/cream text, honey-gold accents
- * Everything is transparent or semi-transparent so the animated orb
+ * Palette: deep espresso backgrounds, latte/cream text, honey-gold accents.
+ * All surfaces are transparent/semi-transparent so the animated orb
  * background shows through from beneath.
  */
 
 /* ===================================================================
-   ATM Panel — the frosted glass card floating over the background
+   ATM Panel — frosted glass card
 =================================================================== */
 #ATMPanel {
     -fx-background-color: rgba(30, 14, 5, 0.72);
@@ -22,19 +22,18 @@
 =================================================================== */
 #BankNameLabel {
     -fx-font-family: "Georgia";
-    -fx-font-size: 15px;
+    -fx-font-size: 13px;
     -fx-font-weight: bold;
     -fx-text-fill: #D4A843;
-    -fx-letter-spacing: 4px;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.8), 6, 0, 0, 1);
     -fx-alignment: CENTER;
     -fx-max-width: infinity;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.8), 6, 0, 0, 1);
 }
 
 #DividerLabel {
     -fx-font-family: "Georgia";
-    -fx-font-size: 10px;
-    -fx-text-fill: rgba(212, 168, 67, 0.4);
+    -fx-font-size: 9px;
+    -fx-text-fill: rgba(212, 168, 67, 0.35);
     -fx-alignment: CENTER;
     -fx-max-width: infinity;
 }
@@ -44,34 +43,13 @@
 =================================================================== */
 #MessageLabel {
     -fx-font-family: "Georgia";
-    -fx-font-size: 17px;
+    -fx-font-size: 16px;
     -fx-font-weight: bold;
     -fx-text-fill: #F5ECD7;
     -fx-alignment: CENTER;
     -fx-max-width: infinity;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.65), 6, 0, 0, 1);
-    -fx-padding: 4 0 4 0;
-}
-
-/* ===================================================================
-   Input field  (number pad entry)
-=================================================================== */
-#InputField {
-    -fx-font-family: "Courier New", monospace;
-    -fx-font-size: 16px;
-    -fx-font-weight: bold;
-    -fx-background-color: rgba(20, 9, 2, 0.82);
-    -fx-border-color: rgba(212, 168, 67, 0.6);
-    -fx-border-width: 1.5px;
-    -fx-border-radius: 6px;
-    -fx-background-radius: 6px;
-    -fx-text-fill: #D4A843;
-    -fx-background-insets: 0;
-    -fx-prompt-text-fill: rgba(212, 168, 67, 0.35);
-}
-
-#InputField .text {
-    -fx-fill: #D4A843;
+    -fx-padding: 4 0 2 0;
 }
 
 /* ===================================================================
@@ -108,7 +86,6 @@
     -fx-fill: #F0DFB8;
 }
 
-/* Scrollbar styling to match theme */
 #ResultScrollPane .scroll-bar {
     -fx-background-color: rgba(30, 14, 5, 0.5);
 }
@@ -122,17 +99,39 @@
 }
 
 /* ===================================================================
-   Base ATM button — shared by all button types
+   Numpad input display field  (inside the overlay)
+=================================================================== */
+#NumpadField {
+    -fx-font-family: "Courier New", monospace;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-background-color: rgba(12, 5, 1, 0.90);
+    -fx-border-color: rgba(212, 168, 67, 0.7);
+    -fx-border-width: 1.5px;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-text-fill: #D4A843;
+    -fx-background-insets: 0;
+    -fx-alignment: CENTER-RIGHT;
+    -fx-padding: 6 12 6 12;
+}
+
+#NumpadField .text {
+    -fx-fill: #D4A843;
+}
+
+/* ===================================================================
+   Base ATM button
 =================================================================== */
 .atm-button {
     -fx-font-family: "Georgia";
-    -fx-font-size: 16px;
+    -fx-font-size: 15px;
     -fx-font-weight: bold;
     -fx-background-radius: 8px;
     -fx-border-radius: 8px;
     -fx-border-width: 1.5px;
-    -fx-min-width: 64px;
-    -fx-min-height: 52px;
+    -fx-min-width: 60px;
+    -fx-min-height: 46px;
     -fx-cursor: hand;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.55), 8, 0.05, 0, 3);
 }
@@ -149,88 +148,73 @@
 }
 
 /* ===================================================================
-   Numpad buttons — warm parchment / latte
+   Numpad buttons — warm parchment
 =================================================================== */
 .keypad-btn {
     -fx-background-color: linear-gradient(to bottom,
-    rgba(210, 185, 148, 0.92),
-    rgba(170, 138, 95, 0.92));
+    rgba(210, 185, 148, 0.92), rgba(170, 138, 95, 0.92));
     -fx-text-fill: #2A1508;
     -fx-border-color: rgba(107, 66, 38, 0.7);
 }
-
 .keypad-btn:hover {
     -fx-background-color: linear-gradient(to bottom,
-    rgba(235, 215, 178, 0.95),
-    rgba(200, 168, 120, 0.95));
+    rgba(235, 215, 178, 0.95), rgba(200, 168, 120, 0.95));
 }
 
 /* ===================================================================
-   Gold action buttons  (Dep, W/D, Bal, Tra, New, Smt, ChP)
+   Gold action buttons  (Dep, W/D, Bal, Tra, New, Smt)
 =================================================================== */
 .action-btn-gold {
     -fx-background-color: linear-gradient(to bottom,
-    rgba(212, 168, 67, 0.90),
-    rgba(160, 120, 40, 0.92));
+    rgba(212, 168, 67, 0.90), rgba(160, 120, 40, 0.92));
     -fx-text-fill: #1E0A02;
     -fx-border-color: rgba(180, 130, 30, 0.85);
 }
-
 .action-btn-gold:hover {
     -fx-background-color: linear-gradient(to bottom,
-    rgba(230, 190, 90, 0.95),
-    rgba(185, 145, 55, 0.95));
+    rgba(230, 190, 90, 0.95), rgba(185, 145, 55, 0.95));
 }
 
 /* ===================================================================
-   Cream secondary action button  (ChP)
+   Cream secondary buttons  (ChP, New)
 =================================================================== */
 .action-btn-cream {
     -fx-background-color: linear-gradient(to bottom,
-    rgba(245, 236, 215, 0.88),
-    rgba(210, 190, 155, 0.88));
+    rgba(245, 236, 215, 0.88), rgba(210, 190, 155, 0.88));
     -fx-text-fill: #3B1F08;
     -fx-border-color: rgba(160, 120, 70, 0.7);
 }
-
 .action-btn-cream:hover {
     -fx-background-color: linear-gradient(to bottom,
-    rgba(255, 248, 232, 0.95),
-    rgba(230, 210, 175, 0.95));
+    rgba(255, 248, 232, 0.95), rgba(230, 210, 175, 0.95));
 }
 
 /* ===================================================================
-   Green confirm button  (Ent)
+   Green confirm  (Ent)
 =================================================================== */
 .action-btn-green {
     -fx-background-color: linear-gradient(to bottom,
-    rgba(82, 170, 82, 0.90),
-    rgba(55, 120, 55, 0.92));
+    rgba(82, 170, 82, 0.90), rgba(55, 120, 55, 0.92));
     -fx-text-fill: #F5ECD7;
     -fx-border-color: rgba(40, 100, 40, 0.80);
 }
-
 .action-btn-green:hover {
     -fx-background-color: linear-gradient(to bottom,
-    rgba(100, 195, 100, 0.95),
-    rgba(70, 145, 70, 0.95));
+    rgba(100, 195, 100, 0.95), rgba(70, 145, 70, 0.95));
 }
 
 /* ===================================================================
-   Red cancel/danger buttons  (CLR, Fin)
+   Red cancel/danger  (CLR, Fin)
 =================================================================== */
 .action-btn-red {
     -fx-background-color: linear-gradient(to bottom,
-    rgba(200, 70, 60, 0.90),
-    rgba(150, 40, 35, 0.92));
+    rgba(200, 70, 60, 0.90), rgba(150, 40, 35, 0.92));
     -fx-text-fill: #F5ECD7;
     -fx-border-color: rgba(120, 30, 25, 0.80);
 }
-
 .action-btn-red:hover {
     -fx-background-color: linear-gradient(to bottom,
-    rgba(225, 90, 78, 0.95),
-    rgba(175, 55, 48, 0.95));
+    rgba(225, 90, 78, 0.95), rgba(175, 55, 48, 0.95));
 }
 
 /* ===================================================================
@@ -238,41 +222,35 @@
 =================================================================== */
 #quickBtn {
     -fx-background-color: linear-gradient(to bottom,
-    rgba(212, 168, 67, 0.85),
-    rgba(155, 110, 25, 0.88));
+    rgba(212, 168, 67, 0.85), rgba(155, 110, 25, 0.88));
     -fx-text-fill: #1E0A02;
     -fx-border-color: rgba(170, 125, 30, 0.75);
     -fx-font-family: "Georgia";
-    -fx-font-size: 14px;
+    -fx-font-size: 13px;
     -fx-font-weight: bold;
     -fx-background-radius: 8px;
     -fx-border-radius: 8px;
     -fx-border-width: 1.5px;
-    -fx-min-width: 82px;
-    -fx-pref-height: 40px;
+    -fx-min-width: 78px;
+    -fx-pref-height: 36px;
     -fx-cursor: hand;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 6, 0, 0, 2);
 }
-
 #quickBtn:hover {
-    -fx-scale-x: 1.06;
-    -fx-scale-y: 1.06;
+    -fx-scale-x: 1.06; -fx-scale-y: 1.06;
     -fx-background-color: linear-gradient(to bottom,
-    rgba(235, 195, 90, 0.95),
-    rgba(180, 135, 45, 0.95));
+    rgba(235, 195, 90, 0.95), rgba(180, 135, 45, 0.95));
 }
-
 #quickBtn:pressed {
-    -fx-scale-x: 0.97;
-    -fx-scale-y: 0.97;
+    -fx-scale-x: 0.97; -fx-scale-y: 0.97;
 }
 
 /* ===================================================================
-   FAQ and Mute buttons
+   FAQ button
 =================================================================== */
-#faqButton, #soundButton {
+#faqButton {
     -fx-font-family: "Georgia";
-    -fx-font-size: 12px;
+    -fx-font-size: 11px;
     -fx-font-weight: bold;
     -fx-background-color: rgba(107, 66, 38, 0.72);
     -fx-text-fill: #F5ECD7;
@@ -280,18 +258,52 @@
     -fx-border-width: 1.5px;
     -fx-background-radius: 6px;
     -fx-border-radius: 6px;
-    -fx-min-width: 110px;
-    -fx-pref-height: 32px;
+    -fx-min-width: 80px;
+    -fx-pref-height: 28px;
     -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 5, 0, 0, 1);
 }
-
-#faqButton:hover, #soundButton:hover {
+#faqButton:hover {
     -fx-background-color: rgba(140, 88, 50, 0.88);
     -fx-text-fill: #D4A843;
 }
 
-#faqButton:pressed, #soundButton:pressed {
-    -fx-scale-x: 0.97;
-    -fx-scale-y: 0.97;
+/* ===================================================================
+   Sound / mute button (top right emoji button)
+=================================================================== */
+#soundButton {
+    -fx-font-size: 18px;
+    -fx-background-color: rgba(30, 14, 5, 0.55);
+    -fx-background-radius: 50%;
+    -fx-border-color: rgba(212, 168, 67, 0.4);
+    -fx-border-width: 1px;
+    -fx-border-radius: 50%;
+    -fx-min-width: 38px;
+    -fx-min-height: 38px;
+    -fx-cursor: hand;
+}
+#soundButton:hover {
+    -fx-background-color: rgba(107, 66, 38, 0.85);
+}
+
+/* ===================================================================
+   Manual login / Create Account ghost buttons (welcome screen)
+=================================================================== */
+#manualLoginBtn {
+    -fx-font-family: "Georgia";
+    -fx-font-size: 13px;
+    -fx-text-fill: #F5ECD7;
+    -fx-background-color: rgba(107, 66, 38, 0.70);
+    -fx-background-radius: 8px;
+    -fx-border-color: #D4A843;
+    -fx-border-width: 1.5px;
+    -fx-border-radius: 8px;
+    -fx-padding: 8 22 8 22;
+    -fx-cursor: hand;
+}
+#manualLoginBtn:hover {
+    -fx-background-color: rgba(107, 66, 38, 0.95);
+    -fx-text-fill: #D4A843;
+}
+#manualLoginBtn:pressed {
+    -fx-scale-x: 0.97; -fx-scale-y: 0.97;
 }

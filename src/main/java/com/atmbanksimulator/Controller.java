@@ -1,16 +1,11 @@
 package com.atmbanksimulator;
 
-// ===== ⚡ Controller (Nerves) =====
-
-// The Controller receives user actions from the View and delegates the appropriate tasks to the UIModel.
-// Its main job is to decide what to do based on the user input.
+// ===== Controller (Nerves) =====
+// Receives button presses from View and delegates to UIModel.
 public class Controller {
 
-    UIModel UIModel; // Reference to the UIModel (part of the MVC setup)
+    UIModel UIModel;
 
-    // The process method is called by the View in response to user interface events.
-    // It uses a switch statement to determine which UIModel method should be called,
-    // and delegates the task accordingly.
     void process(String action) {
         SoundPlayer.playButtonPress();
 
@@ -25,36 +20,38 @@ public class Controller {
             case "Ent":
                 UIModel.processEnter();
                 break;
-            case "W/D":
+            // ── Full-name action buttons ───────────────────────────────────
+            case "Withdraw":
                 UIModel.processWithdraw();
                 break;
-            case "Dep":
+            case "Deposit":
                 UIModel.processDeposit();
                 break;
-            case "Bal":
+            case "Balance":
                 UIModel.processBalance();
                 break;
-            case "Fin":
+            case "Logout":
                 UIModel.processFinish();
                 break;
-            case "ChP":
+            case "Change PIN":
                 UIModel.processChangePassword();
                 break;
-            case "New":
+            case "New Account":
                 UIModel.processNewAccount();
                 break;
-            case "Tra":
+            case "Transfer":
                 UIModel.processTransfer();
+                break;
+            case "Statement":
+                UIModel.processMiniStatement();
                 break;
             case "Mut":
                 UIModel.processMuteToggle();
                 break;
             case "FAQ":
-                // View opens the FAQ window. We only keep the button-click sound here.
+                // View opens FAQ window; sound already played above.
                 break;
-            case "Smt":
-                UIModel.processMiniStatement();
-                break;
+            // ── Quick withdraw options (shown after Withdraw pressed) ──────
             case "W10":
                 UIModel.processQuickWithdraw(10);
                 break;
@@ -66,6 +63,9 @@ public class Controller {
                 break;
             case "W100":
                 UIModel.processQuickWithdraw(100);
+                break;
+            case "WOther":
+                UIModel.processWithdrawOther();
                 break;
             default:
                 UIModel.processUnknownKey(action);

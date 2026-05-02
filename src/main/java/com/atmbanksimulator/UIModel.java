@@ -7,7 +7,9 @@ public class UIModel {
     View view;
     private Bank bank;
 
-    private final String STATE_ACCOUNT_NO    = "account_no";   // now means "waiting for NFC tap"
+    // States
+    private final String STATE_WELCOME       = "welcome";
+    private final String STATE_ACCOUNT_NO    = "account_no";
     private final String STATE_PASSWORD      = "password";
     private final String STATE_LOGGED_IN     = "logged_in";
     private final String STATE_CHANGE_PW_OLD = "change_pw_old";
@@ -18,325 +20,311 @@ public class UIModel {
     private final String STATE_TRANSFER_ACC  = "transfer_acc";
     private final String STATE_TRANSFER_AMT  = "transfer_amt";
 
-    private String state        = STATE_ACCOUNT_NO;
+    private String state        = STATE_WELCOME;
     private String accNumber    = "";
     private String accPasswd    = "";
     private String newAccNumber = "";
     private String newAccPasswd = "";
     private String transferDestAcc = "";
 
-    private String message;
-    private String numberPadInput;
-    private String result;
+    private String message        = "";
+    private String numberPadInput = "";
+    private String result         = "";
+
+    // Remembers the onManualLogin lambda so logout can restore the welcome page
+    private Runnable onManualLoginLambda;
 
     public UIModel(Bank bank) {
         this.bank = bank;
     }
 
     // -----------------------------------------------------------------------
-    // Main menu helper
-    // -----------------------------------------------------------------------
-    private String mainMenu() {
-        return "========================\n" +
-                "  MAIN MENU\n"             +
-                "========================\n" +
-                "  Dep = Deposit\n"         +
-                "  W/D = Withdraw\n"        +
-                "  Tra = Transfer\n"        +
-                "  Bal = Check Balance\n"   +
-                "  Smt = Mini Statement\n"  +
-                "  ChP = Change Password\n" +
-                "  New = Create Account\n"  +
-                "  Fin = Logout\n"          +
-                "========================";
-    }
-
-    // -----------------------------------------------------------------------
-    // Welcome screen — now shows NFC tap prompt instead of account number
+    // Called by Main.java after the view is ready (NFC idle state)
     // -----------------------------------------------------------------------
     public void initialise() {
-        setState(STATE_ACCOUNT_NO);
-        numberPadInput = "";
-        message = "Welcome to Brighton ATM";
-        result  = "========================\n"    +
-                "  Tap your NFC card\n"          +
-                "  on your phone to\n"           +
-                "  log in\n"                     +
-                "========================\n"      +
-                "  New user? Press \"New\"\n"    +
-                "  to create an account\n"       +
-                "========================\n"      +
-                "  Press ? FAQ for help";
-        update();
+        // No-op in new architecture — view.initAndShowWelcome() handles the splash.
     }
 
     // -----------------------------------------------------------------------
-    // processNFCLogin — called by NFCServer when a card is tapped.
-    // Runs on JavaFX thread via Platform.runLater so it can update the UI.
+    // Called by Main.java when "Login Manually" is pressed on the splash
+    // -----------------------------------------------------------------------
+    public void startManualLoginFlow() {
+        setState(STATE_ACCOUNT_NO);
+        numberPadInput = "";
+        accNumber = "";
+        accPasswd = "";
+        message = "Enter Account Number";
+        result  = "";
+        // Show the numpad input prompt page
+        view.showManualLoginAccNumber();
+        view.setNumpadVisible(true);
+        view.update(message, numberPadInput, result);
+    }
+
+    // -----------------------------------------------------------------------
+    // processNFCLogin — called from NFCServer thread, dispatched to FX thread
     // -----------------------------------------------------------------------
     public void processNFCLogin(String uid) {
         Platform.runLater(() -> {
-            System.out.println("[UIModel] NFC login attempt — UID: " + uid);
-
+            System.out.println("[UIModel] NFC login — UID: " + uid);
             if (bank.loginByUID(uid)) {
-                setState(STATE_LOGGED_IN);
-                numberPadInput = "";
-                message = "Card Authenticated  ✓";
-                successSound();
-                result  = "========================\n"  +
-                        "  Welcome!\n"                 +
-                        "  Account: " + bank.getAccountType().toUpperCase() + "\n" +
-                        "========================\n"  +
-                        mainMenu();
+                SoundPlayer.playSuccess();
+                String type = bank.getAccountType();
+                // Show animated greeting, then transition to main menu
+                view.showWelcomeGreeting(type, () -> {
+                    setState(STATE_LOGGED_IN);
+                    message = "Welcome — " + type.toUpperCase() + " account";
+                    result  = mainMenu();
+                    view.showATMPanel();
+                    view.update(message, "", result);
+                    view.setNumpadVisible(false);
+                    view.setQuickButtonsVisible(false);
+                });
             } else {
+                SoundPlayer.playError();
                 message = "Card Not Recognised";
-                errorSound();
                 result  = "========================\n" +
-                        "  This card is not\n"       +
-                        "  linked to any account\n"  +
-                        "========================\n"  +
-                        "  Please contact your\n"    +
-                        "  bank to register\n"       +
-                        "  your card\n"              +
-                        "========================\n"  +
+                        "  This card is not\n"      +
+                        "  linked to any account\n" +
+                        "========================\n" +
+                        "  Please contact your\n"   +
+                        "  bank to register\n"      +
+                        "  your NFC card\n"         +
+                        "========================\n" +
                         "  Tap again to retry";
+                view.update(message, "", result);
             }
-            update();
         });
     }
 
     // -----------------------------------------------------------------------
-    // Reset – updated to show NFC tap prompt instead of account number entry
+    // Main menu text
     // -----------------------------------------------------------------------
-    private void reset(String msg) {
-        setState(STATE_ACCOUNT_NO);
-        numberPadInput = "";
-        message = msg;
-        if (msg.equals("Thank you for using the Bank ATM")) {
-            result = "========================\n"  +
-                    "  Goodbye!\n"               +
-                    "  Have a great day.\n"      +
-                    "========================\n"  +
-                    "  Tap your NFC card\n"      +
-                    "  to start a new session";
-        } else {
-            result = "========================\n"  +
-                    "  Tap your NFC card\n"      +
-                    "  on your phone to\n"       +
-                    "  log in\n"                 +
-                    "========================\n"  +
-                    "  New user? Press \"New\"\n" +
-                    "  Press ? FAQ for help";
-        }
+    private String mainMenu() {
+        return "========================\n" +
+                "  Ready — use the\n"       +
+                "  buttons to continue.\n"  +
+                "========================";
     }
-
-    private void setState(String newState) {
-        if (!state.equals(newState)) {
-            System.out.println("UIModel::setState: " + state + " -> " + newState);
-            state = newState;
-        }
-    }
-
-    private void successSound() { SoundPlayer.playSuccess(); }
-    private void errorSound()   { SoundPlayer.playError(); }
 
     // -----------------------------------------------------------------------
     // Number / Clear
     // -----------------------------------------------------------------------
-    public void processNumber(String numberOnButton) {
-        numberPadInput += numberOnButton;
-        message = "Beep! " + numberOnButton + " received";
-        update();
+    public void processNumber(String n) {
+        numberPadInput += n;
+        message = "Input: " + mask(numberPadInput);
+        view.update(message, numberPadInput, result);
     }
 
     public void processClear() {
-        if (!numberPadInput.isEmpty()) {
-            numberPadInput = "";
-            message = "Input Cleared";
-            update();
-        }
+        numberPadInput = "";
+        message = "Input Cleared";
+        view.update(message, numberPadInput, result);
     }
 
     // -----------------------------------------------------------------------
-    // Enter – STATE_ACCOUNT_NO and STATE_PASSWORD are kept for the
-    // "Create Account" flow which still uses the keypad.
-    // NFC login bypasses both these states entirely.
+    // Enter
     // -----------------------------------------------------------------------
     public void processEnter() {
         switch (state) {
 
+            // ── Manual login: step 1 – account number ───────────────────
             case STATE_ACCOUNT_NO:
-                // In NFC mode, pressing Ent on the welcome screen does nothing
-                // (user must tap card). Only the new-account flow uses keypad entry.
-                message = "Please tap your NFC card";
-                errorSound();
+                if (numberPadInput.isEmpty()) {
+                    message = "Please enter account number";
+                    SoundPlayer.playError();
+                    view.update(message, numberPadInput, result);
+                } else {
+                    accNumber = numberPadInput;
+                    numberPadInput = "";
+                    setState(STATE_PASSWORD);
+                    message = "Account: " + accNumber;
+                    result  = "";
+                    view.showManualLoginPassword();
+                    view.setNumpadVisible(true);
+                    view.update(message, numberPadInput, result);
+                }
                 break;
 
+            // ── Manual login: step 2 – password ─────────────────────────
             case STATE_PASSWORD:
-                // Kept in case of fallback manual login — not used in NFC mode
                 accPasswd = numberPadInput;
                 numberPadInput = "";
                 if (bank.login(accNumber, accPasswd)) {
-                    setState(STATE_LOGGED_IN);
-                    message = "Logged In Successfully";
-                    successSound();
-                    result  = mainMenu();
+                    SoundPlayer.playSuccess();
+                    String type = bank.getAccountType();
+                    view.showWelcomeGreeting(type, () -> {
+                        setState(STATE_LOGGED_IN);
+                        message = "Welcome — " + type.toUpperCase() + " account";
+                        result  = mainMenu();
+                        view.showATMPanel();
+                        view.update(message, "", result);
+                        view.setNumpadVisible(false);
+                        view.setQuickButtonsVisible(false);
+                    });
                 } else {
                     if (bank.isLocked(accNumber)) {
+                        SoundPlayer.playError();
                         message = "ACCOUNT LOCKED";
-                        errorSound();
-                        result = "========================\n" +
+                        result  = "========================\n" +
                                 "  TOO MANY ATTEMPTS!\n"    +
-                                "  This account is locked\n" +
-                                "  until the app restarts.\n" +
-                                "========================\n" +
-                                "  Please contact staff.";
-                        setState(STATE_ACCOUNT_NO);
+                                "  This account is locked\n"+
+                                "  Please contact staff.\n" +
+                                "========================";
+                        setState(STATE_WELCOME);
+                        view.setNumpadVisible(false);
+                        view.update(message, "", result);
                     } else {
-                        message = "Login Failed: Incorrect PIN";
-                        errorSound();
-                        reset(message);
+                        SoundPlayer.playError();
+                        message = "Login Failed — incorrect credentials";
+                        view.update(message, "", result);
                     }
                 }
                 break;
 
+            // ── Transfer: destination account ───────────────────────────
             case STATE_TRANSFER_ACC:
                 if (numberPadInput.isEmpty()) {
-                    message = "Enter Target Account";
-                    errorSound();
+                    message = "Enter destination account";
+                    SoundPlayer.playError();
+                    view.update(message, numberPadInput, result);
                 } else {
                     transferDestAcc = numberPadInput;
-                    numberPadInput = "";
+                    numberPadInput  = "";
                     setState(STATE_TRANSFER_AMT);
                     message = "Transfer to: " + transferDestAcc;
-                    successSound();
-                    result = "========================\n" +
-                            "  Transfer to: " + transferDestAcc + "\n" +
-                            "  Enter AMOUNT to send\n" +
-                            "  then press \"Ent\"\n" +
-                            "========================";
+                    result  = "========================\n" +
+                            "  Transfer to:\n"          +
+                            "  " + transferDestAcc + "\n" +
+                            "========================\n" +
+                            "  Enter AMOUNT then Ent";
+                    SoundPlayer.playSuccess();
+                    view.update(message, numberPadInput, result);
                 }
                 break;
 
+            // ── Transfer: amount ─────────────────────────────────────────
             case STATE_TRANSFER_AMT:
-                int tAmount = parseValidAmount(numberPadInput);
+                int tAmt = parseAmount(numberPadInput);
                 numberPadInput = "";
-                if (bank.transfer(transferDestAcc, tAmount)) {
+                if (bank.transfer(transferDestAcc, tAmt)) {
                     setState(STATE_LOGGED_IN);
+                    SoundPlayer.playSuccess();
                     message = "Transfer Successful";
-                    successSound();
-                    result = "========================\n" +
-                            "  Sent: £" + tAmount + "\n" +
-                            "  To: " + transferDestAcc + "\n" +
-                            "  New Balance: £" + bank.getBalance() + "\n" +
-                            "========================\n" +
-                            "  Bal / Dep / W/D / Fin";
-                } else {
-                    setState(STATE_LOGGED_IN);
-                    message = "Transfer Failed";
-                    errorSound();
-                    result = "========================\n" +
-                            "  TRANSACTION FAILED\n"   +
-                            "  - Check recipient ID\n" +
-                            "  - Check your balance\n" +
+                    result  = "========================\n" +
+                            "  Sent:    £" + tAmt + "\n"           +
+                            "  To:      " + transferDestAcc + "\n" +
+                            "  Balance: £" + bank.getBalance() + "\n" +
                             "========================\n" +
                             mainMenu();
+                    view.setNumpadVisible(false);
+                } else {
+                    setState(STATE_LOGGED_IN);
+                    SoundPlayer.playError();
+                    message = "Transfer Failed";
+                    result  = "========================\n"  +
+                            "  TRANSACTION FAILED\n"     +
+                            "  Check recipient & balance\n" +
+                            "========================\n"  +
+                            mainMenu();
+                    view.setNumpadVisible(false);
                 }
+                view.update(message, "", result);
                 break;
 
+            // ── Change password: verify old ──────────────────────────────
             case STATE_CHANGE_PW_OLD:
-                if (numberPadInput.equals("") || !numberPadInput.equals(bank.getLoggedInPassword())) {
+                if (!numberPadInput.equals(bank.getLoggedInPassword())) {
                     numberPadInput = "";
-                    message = "Incorrect Old Password";
-                    errorSound();
+                    message = "Incorrect old password";
+                    SoundPlayer.playError();
                     setState(STATE_LOGGED_IN);
                     result  = mainMenu();
+                    view.setNumpadVisible(false);
+                    view.update(message, "", result);
                 } else {
                     numberPadInput = "";
                     setState(STATE_CHANGE_PW_NEW);
-                    message = "Old Password Verified";
-                    successSound();
-                    result  = "========================\n"     +
-                            "  Enter NEW password\n"         +
-                            "  (min 6 chars,\n"             +
-                            "  letters + digits)\n"         +
-                            "  then press \"Ent\"\n"        +
+                    SoundPlayer.playSuccess();
+                    message = "Old password verified — enter new";
+                    result  = "========================\n"    +
+                            "  Enter NEW password\n"       +
+                            "  (min 6 chars, letters+digits)\n" +
+                            "  then press Ent\n"           +
                             "========================";
+                    view.update(message, numberPadInput, result);
                 }
                 break;
 
+            // ── Change password: new password ────────────────────────────
             case STATE_CHANGE_PW_NEW:
                 String newPw = numberPadInput;
                 numberPadInput = "";
                 if (bank.changePassword(newPw)) {
                     setState(STATE_LOGGED_IN);
+                    SoundPlayer.playSuccess();
                     message = "Password Changed Successfully";
-                    successSound();
                     result  = mainMenu();
+                    view.setNumpadVisible(false);
                 } else {
-                    message = "Invalid Password";
-                    errorSound();
+                    message = "Invalid password — try again";
+                    SoundPlayer.playError();
                     result  = "========================\n"  +
-                            "  Enter NEW password\n"     +
-                            "  again\n"                  +
-                            "  (min 6 chars,\n"          +
-                            "  letters + digits)\n"      +
-                            "  then press \"Ent\"\n"     +
+                            "  Password must be:\n"      +
+                            "  min 6 chars, has letters\n"+
+                            "  and digits\n"             +
                             "========================";
                 }
+                view.update(message, numberPadInput, result);
                 break;
 
+            // ── New account: number ──────────────────────────────────────
             case STATE_NEW_ACC_NO:
-                if (numberPadInput.equals("") || numberPadInput.length() < 4) {
-                    message = "Account Number Too Short";
-                    errorSound();
-                    result  = "========================\n" +
-                            "  Re-enter account\n"      +
-                            "  number (min 4 digits)\n" +
-                            "  then press \"Ent\"\n"    +
-                            "========================";
+                if (numberPadInput.length() < 4) {
+                    message = "Account number too short (min 4)";
+                    SoundPlayer.playError();
+                    view.update(message, numberPadInput, result);
                 } else {
                     newAccNumber = numberPadInput;
                     numberPadInput = "";
                     setState(STATE_NEW_ACC_PW);
-                    message = "Account Number Accepted";
-                    successSound();
+                    SoundPlayer.playSuccess();
+                    message = "Number accepted — enter password";
                     result  = "========================\n"  +
                             "  Enter a password\n"       +
                             "  (min 6 chars,\n"          +
                             "  letters + digits)\n"      +
-                            "  then press \"Ent\"\n"     +
+                            "  then press Ent\n"         +
                             "========================";
+                    view.update(message, numberPadInput, result);
                 }
                 break;
 
+            // ── New account: password ────────────────────────────────────
             case STATE_NEW_ACC_PW:
                 if (numberPadInput.length() < 6) {
-                    message = "Password Too Short (min 6)";
-                    errorSound();
-                    result  = "========================\n"  +
-                            "  Re-enter password\n"      +
-                            "  (min 6 chars,\n"          +
-                            "  letters + digits)\n"      +
-                            "  then press \"Ent\"\n"     +
-                            "========================";
+                    message = "Password too short (min 6)";
+                    SoundPlayer.playError();
+                    view.update(message, numberPadInput, result);
                 } else {
                     newAccPasswd = numberPadInput;
                     numberPadInput = "";
                     setState(STATE_NEW_ACC_TYPE);
-                    message = "Password Accepted";
-                    successSound();
+                    SoundPlayer.playSuccess();
+                    message = "Password accepted — choose type";
                     result  = "========================\n" +
                             "  Choose account type:\n"  +
                             "  1 = Student\n"           +
                             "  2 = Prime\n"             +
                             "  3 = Saving\n"            +
                             "  4 = Standard\n"          +
-                            "  then press \"Ent\"\n"    +
+                            "  then press Ent\n"        +
                             "========================";
+                    view.update(message, numberPadInput, result);
                 }
                 break;
 
+            // ── New account: type choice ─────────────────────────────────
             case STATE_NEW_ACC_TYPE:
                 String typeChoice = numberPadInput;
                 numberPadInput = "";
@@ -348,313 +336,382 @@ public class UIModel {
                     default:  accType = "standard";
                 }
                 if (bank.addBankAccount(newAccNumber, newAccPasswd, 0, accType)) {
-                    newAccNumber = "";
-                    newAccPasswd = "";
-                    successSound();
-                    reset("Account Created Successfully");
+                    newAccNumber = ""; newAccPasswd = "";
+                    SoundPlayer.playSuccess();
+                    message = "Account Created Successfully";
+                    setState(STATE_WELCOME);
+                    view.setNumpadVisible(false);
+                    view.update(message, "", "========================\n" +
+                            "  Account created!\n"       +
+                            "  You can now log in.\n"    +
+                            "========================");
                 } else {
-                    newAccNumber = "";
-                    newAccPasswd = "";
-                    errorSound();
-                    reset("Account Already Exists or Creation Failed");
+                    newAccNumber = ""; newAccPasswd = "";
+                    SoundPlayer.playError();
+                    message = "Account already exists or creation failed";
+                    setState(STATE_WELCOME);
+                    view.setNumpadVisible(false);
+                    view.update(message, "", result);
                 }
                 break;
 
-            case STATE_LOGGED_IN:
             default:
-                // no-op
+                // no-op for STATE_LOGGED_IN (actions handled by dedicated methods)
+                break;
         }
-        update();
     }
 
     // -----------------------------------------------------------------------
     // Transfer
     // -----------------------------------------------------------------------
     public void processTransfer() {
-        if (state.equals(STATE_LOGGED_IN)) {
-            numberPadInput = "";
-            transferDestAcc = "";
-            setState(STATE_TRANSFER_ACC);
-            message = "Transfer Funds";
-            result  = "========================\n" +
-                    "  Enter DESTINATION\n"      +
-                    "  account number\n"         +
-                    "  then press \"Ent\"\n"     +
-                    "========================\n" +
-                    "  Press CLR to cancel";
-        } else {
-            errorSound();
-            reset("You Are Not Logged In");
-        }
-        update();
+        if (!requireLogin()) return; cancelFlow();
+        numberPadInput = ""; transferDestAcc = "";
+        setState(STATE_TRANSFER_ACC);
+        SoundPlayer.playButtonPress();
+        message = "Transfer — Enter Destination Account";
+        result  = "========================\n" +
+                "  Enter DESTINATION\n"      +
+                "  account number\n"         +
+                "  then press Ent\n"         +
+                "========================\n" +
+                "  Press CLR to cancel";
+        view.setNumpadVisible(true);
+        view.update(message, numberPadInput, result);
     }
 
     // -----------------------------------------------------------------------
     // Balance
     // -----------------------------------------------------------------------
     public void processBalance() {
-        if (state.equals(STATE_LOGGED_IN)) {
-            numberPadInput = "";
-            message = "Balance Available";
-            successSound();
-            String lowWarn = bank.isLowBalance()
-                ? "\n  !! LOW BALANCE !!\n  Consider depositing funds." : "";
-            result = "========================\n"           +
-                    "  Your balance is:\n"                +
-                    "  \u00A3" + bank.getBalance() + "\n" +
-                    "========================\n"           +
-                    "  Dep / W/D / ChP / Fin"             +
-                    lowWarn;
-        } else {
-            errorSound();
-            reset("You Are Not Logged In");
-        }
-        update();
+        if (!requireLogin()) return; cancelFlow();
+        numberPadInput = "";
+        SoundPlayer.playSuccess();
+        String lowWarn = bank.isLowBalance() ? "\n  !! LOW BALANCE !!\n  Consider depositing." : "";
+        message = "Balance Available";
+        result  = "========================\n"            +
+                "  Your balance is:\n"                 +
+                "  £" + bank.getBalance() + "\n"       +
+                "========================\n"            +
+                "  Deposit / Withdraw / Logout"              +
+                lowWarn;
+        view.setNumpadVisible(false);
+        view.update(message, "", result);
     }
 
     // -----------------------------------------------------------------------
     // Mini Statement
     // -----------------------------------------------------------------------
     public void processMiniStatement() {
-        if (state.equals(STATE_LOGGED_IN)) {
-            numberPadInput = "";
-            List<String> txns = bank.getMiniStatement();
-            StringBuilder sb = new StringBuilder();
-            sb.append("========================\n");
-            sb.append("  MINI STATEMENT\n");
-            sb.append("  Last 5 transactions\n");
-            sb.append("========================\n");
-            if (txns.isEmpty()) {
-                sb.append("  No transactions yet.\n");
-            } else {
-                for (int i = 0; i < txns.size(); i++) {
-                    sb.append("  ").append(i + 1).append(". ")
-                            .append(txns.get(i)).append("\n");
-                }
-            }
-            sb.append("========================");
-            if (bank.isLowBalance()) {
-                sb.append("\n  !! LOW BALANCE !!\n");
-                sb.append("  Balance under \u00A350");
-            }
-            message = "Mini Statement";
-            successSound();
-            result = sb.toString();
+        if (!requireLogin()) return; cancelFlow();
+        numberPadInput = "";
+        List<String> txns = bank.getMiniStatement();
+        StringBuilder sb = new StringBuilder();
+        sb.append("========================\n");
+        sb.append("  MINI STATEMENT\n");
+        sb.append("  Last 5 transactions\n");
+        sb.append("========================\n");
+        if (txns.isEmpty()) {
+            sb.append("  No transactions yet.\n");
         } else {
-            errorSound();
-            reset("You Are Not Logged In");
+            for (int i = 0; i < txns.size(); i++)
+                sb.append("  ").append(i+1).append(". ").append(txns.get(i)).append("\n");
         }
-        update();
+        sb.append("========================");
+        if (bank.isLowBalance()) sb.append("\n  !! LOW BALANCE !!");
+        SoundPlayer.playSuccess();
+        message = "Mini Statement";
+        result  = sb.toString();
+        view.setNumpadVisible(false);
+        view.update(message, "", result);
     }
 
     // -----------------------------------------------------------------------
     // Quick Withdraw
     // -----------------------------------------------------------------------
     public void processQuickWithdraw(int amount) {
-        if (state.equals(STATE_LOGGED_IN)) {
-            if (bank.withdraw(amount)) {
-                message = "Withdrawal Successful";
-                successSound();
-                String lowWarn = bank.isLowBalance() ? "\n  !! LOW BALANCE !!" : "";
-                result = "========================\n"                   +
-                        "  Quick Withdraw: £" + amount + "\n"         +
-                        "  New balance: £" + bank.getBalance() + "\n" +
-                        "========================\n"                   +
-                        "  Dep / W/D / Bal / Fin"                     +
-                        lowWarn;
-            } else {
-                message = "Withdrawal Failed";
-                errorSound();
-                result = "========================\n"               +
-                        "  Insufficient funds\n"                  +
-                        "  Balance: £" + bank.getBalance() + "\n" +
-                        "========================\n"               +
-                        "  Please try a smaller amount";
-            }
+        if (!requireLogin()) return; cancelFlow();
+        if (bank.withdraw(amount)) {
+            SoundPlayer.playSuccess();
+            message = "Quick Withdrawal — £" + amount;
+            result  = "========================\n"                    +
+                    "  Withdrawn:  £" + amount + "\n"              +
+                    "  Balance:    £" + bank.getBalance() + "\n"   +
+                    "========================\n"                    +
+                    mainMenu()                                      +
+                    (bank.isLowBalance() ? "\n  !! LOW BALANCE !!" : "");
         } else {
-            errorSound();
-            reset("You Are Not Logged In");
+            SoundPlayer.playError();
+            message = "Insufficient Funds";
+            result  = "========================\n"                       +
+                    "  Insufficient funds\n"                          +
+                    "  Balance: £" + bank.getBalance() + "\n"         +
+                    "========================\n"                       +
+                    "  Please try a smaller amount";
         }
-        update();
+        view.setQuickButtonsVisible(false);
+        view.setNumpadVisible(false);
+        view.update(message, "", result);
+    }
+
+    // -----------------------------------------------------------------------
+    // Withdraw — "Other Amount": shows numpad so user can type custom value
+    // -----------------------------------------------------------------------
+    public void processWithdrawOther() {
+        if (!requireLogin()) return; cancelFlow();
+        numberPadInput = "";
+        message = "Enter withdrawal amount then press Withdraw";
+        result  = "========================\n"  +
+                "  Enter amount (£)\n"        +
+                "  then press Withdraw\n"     +
+                "========================";
+        view.setQuickButtonsVisible(false);
+        view.setNumpadVisible(true);
+        view.update(message, numberPadInput, result);
     }
 
     // -----------------------------------------------------------------------
     // Withdraw
     // -----------------------------------------------------------------------
     public void processWithdraw() {
-        if (state.equals(STATE_LOGGED_IN)) {
-            int amount = parseValidAmount(numberPadInput);
-            numberPadInput = "";
-            if (amount > 0) {
-                if (bank.withdraw(amount)) {
-                    message = "Withdrawal Successful";
-                    successSound();
-                    result  = "========================\n"                       +
-                            "  Withdrawn:\n"                                  +
-                            "  \u00A3" + amount + "\n"                        +
-                            "  New balance:\n"                                +
-                            "  \u00A3" + bank.getBalance() + "\n"            +
-                            "========================\n"                       +
-                            "  Dep / W/D / Bal / Fin";
-                } else {
-                    message = "Withdrawal Failed";
-                    errorSound();
-                    result  = "========================\n"                       +
-                            "  Insufficient funds\n"                          +
-                            "  Balance:\n"                                    +
-                            "  \u00A3" + bank.getBalance() + "\n"            +
-                            "========================\n"                       +
-                            "  Please enter new amount";
-                }
+        if (!requireLogin()) return;
+        // Capture input BEFORE cancelFlow() clears it (same logic as processDeposit).
+        int amount = state.equals(STATE_LOGGED_IN) ? parseAmount(numberPadInput) : 0;
+        cancelFlow();
+        if (amount > 0) {
+            // ── Execute the custom amount entered via numpad ──────────────
+            if (bank.withdraw(amount)) {
+                SoundPlayer.playSuccess();
+                message = "Withdrawal Successful";
+                result  = "========================\n"                    +
+                        "  Withdrawn:  £" + amount + "\n"              +
+                        "  Balance:    £" + bank.getBalance() + "\n"   +
+                        "========================\n"                    +
+                        mainMenu();
             } else {
-                message = "Invalid Amount";
-                errorSound();
-                result  = "========================\n"    +
-                        "  Enter a valid amount\n"     +
-                        "  then press W/D\n"           +
-                        "========================";
+                SoundPlayer.playError();
+                message = "Withdrawal Failed — Insufficient Funds";
+                result  = "========================\n"                    +
+                        "  Insufficient funds\n"                       +
+                        "  Balance: £" + bank.getBalance() + "\n"      +
+                        "========================\n"                    +
+                        "  Please enter new amount";
             }
+            view.setNumpadVisible(false);
+            view.setQuickButtonsVisible(false);
         } else {
-            errorSound();
-            reset("You Are Not Logged In");
+            // ── No amount entered → show quick-withdraw options ───────────
+            message = "Select withdrawal amount";
+            result  = "========================\n"  +
+                    "  Choose a quick amount\n"  +
+                    "  or 'Other Amount' to\n"   +
+                    "  enter a custom value.\n"  +
+                    "========================";
+            view.setNumpadVisible(false);
+            view.setQuickButtonsVisible(true);
         }
-        update();
+        view.update(message, "", result);
     }
 
     // -----------------------------------------------------------------------
     // Deposit
     // -----------------------------------------------------------------------
     public void processDeposit() {
-        if (state.equals(STATE_LOGGED_IN)) {
-            int amount = parseValidAmount(numberPadInput);
-            numberPadInput = "";
-            if (amount > 0) {
-                if (bank.deposit(amount)) {
-                    message = "Deposit Successful";
-                    successSound();
-                    result  = "========================\n"                       +
-                            "  Deposited:\n"                                  +
-                            "  \u00A3" + amount + "\n"                        +
-                            "  New balance:\n"                                +
-                            "  \u00A3" + bank.getBalance() + "\n"            +
-                            "========================\n"                       +
-                            "  Dep / W/D / Bal / Fin";
-                } else {
-                    message = "Deposit Failed";
-                    errorSound();
-                    result  = "========================\n"   +
-                            "  Deposit could not be made\n" +
-                            "  Please try again\n"          +
-                            "========================";
-                }
+        if (!requireLogin()) return;
+        // Capture input BEFORE cancelFlow() clears it.
+        // Only treat it as an amount if we are in the idle logged-in state;
+        // if mid-flow (e.g. mid-transfer) the typed digits belong to that
+        // flow and should NOT be used as a deposit amount.
+        int amount = state.equals(STATE_LOGGED_IN) ? parseAmount(numberPadInput) : 0;
+        cancelFlow();
+        if (amount > 0) {
+            if (bank.deposit(amount)) {
+                SoundPlayer.playSuccess();
+                message = "Deposit Successful";
+                result  = "========================\n"                    +
+                        "  Deposited:  £" + amount + "\n"              +
+                        "  Balance:    £" + bank.getBalance() + "\n"   +
+                        "========================\n"                    +
+                        mainMenu();
             } else {
-                message = "Invalid Amount";
-                errorSound();
-                result  = "========================\n"   +
-                        "  Enter a valid amount\n"    +
-                        "  then press Dep\n"          +
+                SoundPlayer.playError();
+                message = "Deposit Failed";
+                result  = "========================\n"     +
+                        "  Deposit could not be made\n" +
+                        "  Please try again\n"          +
                         "========================";
             }
+            view.setNumpadVisible(false);
+            view.update(message, "", result);
         } else {
-            errorSound();
-            reset("You Are Not Logged In");
+            // No amount yet — show the numpad so the user can type one,
+            // then press Deposit again to confirm.
+            message = "Enter deposit amount then press Deposit";
+            result  = "========================\n" +
+                    "  Enter amount (£)\n"       +
+                    "  then press Deposit\n"     +
+                    "========================";
+            view.setNumpadVisible(true);
+            view.update(message, numberPadInput, result);
         }
-        update();
     }
 
     // -----------------------------------------------------------------------
     // Change Password
     // -----------------------------------------------------------------------
     public void processChangePassword() {
-        if (state.equals(STATE_LOGGED_IN)) {
-            numberPadInput = "";
-            setState(STATE_CHANGE_PW_OLD);
-            message = "Change Password";
-            result  = "========================\n" +
-                    "  Enter your OLD\n"         +
-                    "  password using keypad\n"  +
-                    "  then press \"Ent\"\n"     +
-                    "========================\n" +
-                    "  Press CLR to clear";
-        } else {
-            errorSound();
-            reset("You Are Not Logged In");
-        }
-        update();
+        if (!requireLogin()) return; cancelFlow();
+        numberPadInput = "";
+        setState(STATE_CHANGE_PW_OLD);
+        message = "Change Password";
+        result  = "========================\n" +
+                "  Enter your OLD\n"         +
+                "  password then Ent\n"      +
+                "========================\n" +
+                "  Press CLR to clear";
+        view.setNumpadVisible(true);
+        view.update(message, numberPadInput, result);
     }
 
     // -----------------------------------------------------------------------
     // New Account
     // -----------------------------------------------------------------------
     public void processNewAccount() {
-        if (state.equals(STATE_ACCOUNT_NO)) {
-            numberPadInput = "";
-            newAccNumber = "";
-            newAccPasswd = "";
-            setState(STATE_NEW_ACC_NO);
-            message = "Create New Account";
-            result  = "========================\n"  +
-                    "  Enter a new account\n"     +
-                    "  number (min 4 digits)\n"   +
-                    "  then press \"Ent\"\n"      +
-                    "========================\n"  +
-                    "  Press CLR to clear";
-        } else {
-            errorSound();
-            reset("Please Log Out First");
-        }
-        update();
+        // Can be called from welcome screen (STATE_WELCOME) or logged-in state
+        numberPadInput = ""; newAccNumber = ""; newAccPasswd = "";
+        setState(STATE_NEW_ACC_NO);
+        message = "Create New Account";
+        result  = "========================\n"  +
+                "  Enter a new account\n"     +
+                "  number (min 4 digits)\n"   +
+                "  then press Ent\n"          +
+                "========================\n"  +
+                "  Press CLR to clear";
+        view.setNumpadVisible(true);
+        view.update(message, numberPadInput, result);
     }
 
     // -----------------------------------------------------------------------
     // Finish / Logout
     // -----------------------------------------------------------------------
     public void processFinish() {
-        if (state.equals(STATE_LOGGED_IN)) {
-            bank.logout();
-            successSound();
-            reset("Thank you for using the Bank ATM");
-        } else {
-            errorSound();
-            reset("You Are Not Logged In");
-        }
-        update();
+        if (!requireLogin()) return; cancelFlow();
+        bank.logout();
+        SoundPlayer.playSuccess();
+        setState(STATE_WELCOME);
+        view.setNumpadVisible(false);
+        view.setQuickButtonsVisible(false);
+        // Return to welcome splash (same window, animated transition)
+        view.resetToWelcome(() -> startManualLoginFlow());
     }
 
     // -----------------------------------------------------------------------
-    // Sound mute toggle
+    // Mute toggle
     // -----------------------------------------------------------------------
     public void processMuteToggle() {
         boolean muted = SoundPlayer.toggleMute();
         message = muted ? "Sounds Muted" : "Sounds Enabled";
         if (!muted) SoundPlayer.playSuccess();
-        update();
+        view.setSoundMuted(SoundPlayer.isMuted());
+        view.update(message, numberPadInput, result);
     }
 
     // -----------------------------------------------------------------------
     // Unknown key
     // -----------------------------------------------------------------------
     public void processUnknownKey(String action) {
-        errorSound();
-        reset("Invalid Command");
-        update();
+        SoundPlayer.playError();
+        message = "Unknown command: " + action;
+        view.update(message, numberPadInput, result);
+    }
+
+    // -----------------------------------------------------------------------
+    // Deposit (numpad-first: shows numpad prompt)
+    // Withdraw (numpad-first: shows numpad prompt)
+    // These are called by action buttons — they reveal the numpad and prompt.
+    // -----------------------------------------------------------------------
+    public void processWithdrawPrompt() {
+        if (!requireLogin()) return; cancelFlow();
+        numberPadInput = "";
+        message = "Enter withdrawal amount then press W/D";
+        result  = "========================\n"  +
+                "  Enter amount (£)\n"        +
+                "  then press W/D\n"          +
+                "========================";
+        view.setNumpadVisible(true);
+        view.update(message, numberPadInput, result);
+    }
+
+    public void processDepositPrompt() {
+        if (!requireLogin()) return; cancelFlow();
+        numberPadInput = "";
+        message = "Enter deposit amount then press Dep";
+        result  = "========================\n"  +
+                "  Enter amount (£)\n"        +
+                "  then press Dep\n"          +
+                "========================";
+        view.setNumpadVisible(true);
+        view.update(message, numberPadInput, result);
     }
 
     // -----------------------------------------------------------------------
     // Helpers
     // -----------------------------------------------------------------------
-    private int parseValidAmount(String number) {
-        if (number.isEmpty()) return 0;
-        try {
-            return Integer.parseInt(number);
-        } catch (NumberFormatException e) {
-            return 0;
+    private void setState(String s) {
+        if (!state.equals(s)) {
+            System.out.println("UIModel state: " + state + " → " + s);
+            state = s;
         }
     }
 
-    private void update() {
-        view.update(message, numberPadInput, result);
-        view.setSoundMuted(SoundPlayer.isMuted());
-        view.setQuickButtonsVisible(state.equals(STATE_LOGGED_IN));
+    /**
+     * Cancels any in-progress multi-step flow and resets to the base logged-in state.
+     * Call this at the start of every action method so pressing a new button always
+     * cleanly cancels whatever was in progress.
+     */
+    private void cancelFlow() {
+        numberPadInput  = "";
+        transferDestAcc = "";
+        newAccNumber    = "";
+        newAccPasswd    = "";
+        setState(STATE_LOGGED_IN);
+        view.setNumpadVisible(false);
+        view.setQuickButtonsVisible(false);
+    }
+
+    /**
+     * Guards action methods using bank.loggedIn() — NOT state equality.
+     * Mid-flow states (STATE_TRANSFER_ACC, STATE_CHANGE_PW_OLD, etc.) are NOT
+     * STATE_LOGGED_IN, so the old state check wrongly blocked valid actions.
+     * Returns true if the user is logged in (action may proceed).
+     */
+    private boolean requireLogin() {
+        if (!bank.loggedIn()) {
+            SoundPlayer.playError();
+            message = "Please log in first";
+            view.update(message, "", result);
+            return false;
+        }
+        return true;
+    }
+
+    private void notLoggedIn() {
+        SoundPlayer.playError();
+        message = "Please log in first";
+        view.update(message, "", result);
+    }
+
+    private int parseAmount(String s) {
+        if (s == null || s.isEmpty()) return 0;
+        try { return Integer.parseInt(s); } catch (NumberFormatException e) { return 0; }
+    }
+
+    /** Mask input for display (show * except for account-number step) */
+    private String mask(String s) {
+        if (state.equals(STATE_PASSWORD) || state.equals(STATE_CHANGE_PW_OLD) ||
+                state.equals(STATE_CHANGE_PW_NEW) || state.equals(STATE_NEW_ACC_PW)) {
+            return "*".repeat(s.length());
+        }
+        return s;
     }
 }
