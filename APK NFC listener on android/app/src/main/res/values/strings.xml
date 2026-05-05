@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ATM NFC Reader</string>
+    <string name="status_waiting">Waiting for card…</string>
+    <string name="status_sending">Sending to ATM…</string>
+    <string name="status_success">Card accepted</string>
+    <string name="status_error">Authentication failed</string>
+</resources>
