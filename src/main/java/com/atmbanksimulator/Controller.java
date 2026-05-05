@@ -1,16 +1,9 @@
 package com.atmbanksimulator;
 
-// ===== ⚡ Controller (Nerves) =====
-
-// The Controller receives user actions from the View and delegates the appropriate tasks to the UIModel.
-// Its main job is to decide what to do based on the user input.
 public class Controller {
 
-    UIModel UIModel; // Reference to the UIModel (part of the MVC setup)
+    UIModel UIModel;
 
-    // The process method is called by the View in response to user interface events.
-    // It uses a switch statement to determine which UIModel method should be called,
-    // and delegates the task accordingly.
     void process(String action) {
         SoundPlayer.playButtonPress();
 
@@ -49,9 +42,6 @@ public class Controller {
             case "Mut":
                 UIModel.processMuteToggle();
                 break;
-            case "FAQ":
-                // View opens the FAQ window. We only keep the button-click sound here.
-                break;
             case "Smt":
                 UIModel.processMiniStatement();
                 break;
@@ -66,6 +56,16 @@ public class Controller {
                 break;
             case "W100":
                 UIModel.processQuickWithdraw(100);
+                break;
+            // --- ADD THESE TWO CASES ---
+            case "W500":
+                UIModel.processQuickWithdraw(500);
+                break;
+            case "Other":
+                UIModel.processOtherWithdraw();
+                break;
+            // ---------------------------
+            case "FAQ":
                 break;
             default:
                 UIModel.processUnknownKey(action);

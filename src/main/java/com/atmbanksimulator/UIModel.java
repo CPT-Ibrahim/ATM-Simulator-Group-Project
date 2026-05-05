@@ -19,7 +19,6 @@ public class UIModel {
     private final String STATE_TRANSFER_ACC  = "transfer_acc";
     private final String STATE_TRANSFER_AMT  = "transfer_amt";
 
-
     private String state        = STATE_ACCOUNT_NO;
     private String accNumber    = "";
     private String accPasswd    = "";
@@ -55,9 +54,6 @@ public class UIModel {
                 "========================";
     }
 
-    // -----------------------------------------------------------------------
-    // Welcome Page
-    // -----------------------------------------------------------------------
     public void initialise() {
         setState(STATE_ACCOUNT_NO);
         numberPadInput = "";
@@ -74,9 +70,6 @@ public class UIModel {
         update();
     }
 
-    // -----------------------------------------------------------------------
-    // Reset – Goodbye Page on logout, welcome otherwise
-    // -----------------------------------------------------------------------
     private void reset(String msg) {
         setState(STATE_ACCOUNT_NO);
         numberPadInput = "";
@@ -115,9 +108,6 @@ public class UIModel {
         SoundPlayer.playError();
     }
 
-    // -----------------------------------------------------------------------
-    // Number / Clear
-    // -----------------------------------------------------------------------
     public void processNumber(String numberOnButton) {
         numberPadInput += numberOnButton;
         message = "Beep! " + numberOnButton + " received";
@@ -132,13 +122,8 @@ public class UIModel {
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Enter – handles all states
-    // -----------------------------------------------------------------------
     public void processEnter() {
-
         switch (state) {
-
             case STATE_ACCOUNT_NO:
                 if (numberPadInput.equals("")) {
                     message = "Invalid Account Number";
@@ -168,7 +153,6 @@ public class UIModel {
                     successSound();
                     result  = mainMenu();
                 } else {
-                    // Check if failure was due to account lock
                     if (bank.isLocked(accNumber)) {
                         message = "ACCOUNT LOCKED";
                         errorSound();
@@ -347,16 +331,12 @@ public class UIModel {
                 }
                 break;
 
-            case STATE_LOGGED_IN:
             default:
-                // no-op
+                break;
         }
         update();
     }
 
-    // -----------------------------------------------------------------------
-    // Transfer
-    // -----------------------------------------------------------------------
     public void processTransfer() {
         if (state.equals(STATE_LOGGED_IN)) {
             numberPadInput = "";
@@ -376,9 +356,6 @@ public class UIModel {
         update();
     }
 
-    // -----------------------------------------------------------------------
-    // Balance
-    // -----------------------------------------------------------------------
     public void processBalance() {
         if (state.equals(STATE_LOGGED_IN)) {
             numberPadInput = "";
@@ -398,10 +375,6 @@ public class UIModel {
         update();
     }
 
-
-    // -----------------------------------------------------------------------
-    // Mini Statement
-    // -----------------------------------------------------------------------
     public void processMiniStatement() {
         if (state.equals(STATE_LOGGED_IN)) {
             numberPadInput = "";
@@ -435,15 +408,16 @@ public class UIModel {
     }
 
     // -----------------------------------------------------------------------
-    // Quick Withdraw
+    // Quick Withdraw - UPDATED with String response codes
     // -----------------------------------------------------------------------
     public void processQuickWithdraw(int amount) {
         if (state.equals(STATE_LOGGED_IN)) {
-            if (bank.withdraw(amount)) {
+            String status = bank.withdraw(amount);
+
+            if (status.equals("SUCCESS")) {
                 message = "Withdrawal Successful";
                 successSound();
-                String lowWarn = bank.isLowBalance()
-                        ? "\n  !! LOW BALANCE !!" : "";
+                String lowWarn = bank.isLowBalance() ? "\n  !! LOW BALANCE !!" : "";
                 result = "========================\n"                   +
                         "  Quick Withdraw: £" + amount + "\n"         +
                         "  New balance: £" + bank.getBalance() + "\n" +
@@ -451,13 +425,7 @@ public class UIModel {
                         "  Dep / W/D / Bal / Fin"                     +
                         lowWarn;
             } else {
-                message = "Withdrawal Failed";
-                errorSound();
-                result = "========================\n"               +
-                        "  Insufficient funds\n"                  +
-                        "  Balance: £" + bank.getBalance() + "\n" +
-                        "========================\n"               +
-                        "  Please try a smaller amount";
+                handleWithdrawalFailure(status);
             }
         } else {
             errorSound();
@@ -465,33 +433,46 @@ public class UIModel {
         }
         update();
     }
+
+    public void processOtherWithdraw() {
+        if (state.equals(STATE_LOGGED_IN)) {
+            numberPadInput = "";
+            message = "Enter Custom Withdrawal Amount";
+            result  = "========================\n"    +
+                    "  Enter the amount you\n"     +
+                    "  wish to withdraw\n"         +
+                    "  then press \"W/D\"\n"       +
+                    "========================";
+            successSound();
+        } else {
+            errorSound();
+            reset("You Are Not Logged In");
+        }
+        update();
+    }
+
     // -----------------------------------------------------------------------
-    // Withdraw
+    // Manual Withdraw - UPDATED with String response codes
     // -----------------------------------------------------------------------
     public void processWithdraw() {
         if (state.equals(STATE_LOGGED_IN)) {
             int amount = parseValidAmount(numberPadInput);
             numberPadInput = "";
             if (amount > 0) {
-                if (bank.withdraw(amount)) {
+                String status = bank.withdraw(amount);
+                if (status.equals("SUCCESS")) {
                     message = "Withdrawal Successful";
                     successSound();
+                    String lowWarn = bank.isLowBalance() ? "\n  !! LOW BALANCE !!" : "";
                     result  = "========================\n"                       +
                             "  Withdrawn:\n"                                  +
                             "  \u00A3" + amount + "\n"                        +
                             "  New balance:\n"                                +
                             "  \u00A3" + bank.getBalance() + "\n"            +
                             "========================\n"                       +
-                            "  Dep / W/D / Bal / Fin";
+                            "  Dep / W/D / Bal / Fin" + lowWarn;
                 } else {
-                    message = "Withdrawal Failed";
-                    errorSound();
-                    result  = "========================\n"                       +
-                            "  Insufficient funds\n"                          +
-                            "  Balance:\n"                                    +
-                            "  \u00A3" + bank.getBalance() + "\n"            +
-                            "========================\n"                       +
-                            "  Please enter new amount";
+                    handleWithdrawalFailure(status);
                 }
             } else {
                 message = "Invalid Amount";
@@ -508,9 +489,38 @@ public class UIModel {
         update();
     }
 
-    // -----------------------------------------------------------------------
-    // Deposit
-    // -----------------------------------------------------------------------
+    /**
+     * Helper to show the correct failure message based on Bank response
+     */
+    private void handleWithdrawalFailure(String status) {
+        message = "Withdrawal Failed";
+        errorSound();
+        String reason;
+
+        switch (status) {
+            case "DAILY_LIMIT_REACHED":
+                reason = "Student Daily Limit Reached\n  (£500 per session)";
+                break;
+            case "INSUFFICIENT_FUNDS":
+                reason = "Insufficient funds available.";
+                break;
+            case "INVALID_AMOUNT":
+                reason = "Amount must be greater than £0.";
+                break;
+            default:
+                reason = "Database or Account error.";
+                break;
+        }
+
+        result = "========================\n"               +
+                "  TRANSACTION FAILED\n"                  +
+                "  Reason: " + status + "\n"              +
+                "  " + reason + "\n"                      +
+                "  Balance: £" + bank.getBalance() + "\n" +
+                "========================\n"               +
+                "  Please try again.";
+    }
+
     public void processDeposit() {
         if (state.equals(STATE_LOGGED_IN)) {
             int amount = parseValidAmount(numberPadInput);
@@ -531,7 +541,7 @@ public class UIModel {
                     errorSound();
                     result  = "========================\n"   +
                             "  Deposit could not be made\n" +
-                            "  Please try again\n"          +
+                            "  (Max balance reached?)\n"    +
                             "========================";
                 }
             } else {
@@ -549,9 +559,6 @@ public class UIModel {
         update();
     }
 
-    // -----------------------------------------------------------------------
-    // Change Password
-    // -----------------------------------------------------------------------
     public void processChangePassword() {
         if (state.equals(STATE_LOGGED_IN)) {
             numberPadInput = "";
@@ -570,9 +577,6 @@ public class UIModel {
         update();
     }
 
-    // -----------------------------------------------------------------------
-    // New Account
-    // -----------------------------------------------------------------------
     public void processNewAccount() {
         if (state.equals(STATE_ACCOUNT_NO)) {
             numberPadInput = "";
@@ -593,9 +597,6 @@ public class UIModel {
         update();
     }
 
-    // -----------------------------------------------------------------------
-    // Finish / Logout
-    // -----------------------------------------------------------------------
     public void processFinish() {
         if (state.equals(STATE_LOGGED_IN)) {
             bank.logout();
@@ -608,32 +609,19 @@ public class UIModel {
         update();
     }
 
-    // -----------------------------------------------------------------------
-    // Sound mute toggle
-    // -----------------------------------------------------------------------
     public void processMuteToggle() {
         boolean muted = SoundPlayer.toggleMute();
         message = muted ? "Sounds Muted" : "Sounds Enabled";
-
-        if (!muted) {
-            SoundPlayer.playSuccess();
-        }
-
+        if (!muted) SoundPlayer.playSuccess();
         update();
     }
 
-    // -----------------------------------------------------------------------
-    // Unknown key
-    // -----------------------------------------------------------------------
     public void processUnknownKey(String action) {
         errorSound();
         reset("Invalid Command");
         update();
     }
 
-    // -----------------------------------------------------------------------
-    // Helpers
-    // -----------------------------------------------------------------------
     private int parseValidAmount(String number) {
         if (number.isEmpty()) return 0;
         try {
