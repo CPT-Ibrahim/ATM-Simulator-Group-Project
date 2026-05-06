@@ -280,6 +280,54 @@ class View {
         replacePage(panel, true);
     }
 
+    // =====================================================================
+    // QUICK-WITHDRAW SELECTION SCREEN
+    // =====================================================================
+    public void showWithdrawQuickOptions() {
+        clearPageLabels();
+
+        Label title       = titleLabel("Withdraw");
+        Label instruction = instructionLabel("How much would you like to withdraw?");
+        Label helper      = helperLabel("Choose a quick amount, or select \u2018Other Amount\u2019 to enter your own.");
+
+        GridPane grid = new GridPane();
+        grid.setAlignment(Pos.CENTER);
+        grid.setHgap(20);
+        grid.setVgap(16);
+
+        // Left column: £10, £20, £50   |   Right column: £100, £200, Other Amount
+        grid.add(quickAmountButton("\u00a310",         "W10",    false), 0, 0);
+        grid.add(quickAmountButton("\u00a3100",        "W100",   false), 1, 0);
+        grid.add(quickAmountButton("\u00a320",         "W20",    false), 0, 1);
+        grid.add(quickAmountButton("\u00a3200",        "W200",   false), 1, 1);
+        grid.add(quickAmountButton("\u00a350",         "W50",    false), 0, 2);
+        grid.add(quickAmountButton("Other Amount \u2192", "WOther", true),  1, 2);
+
+        VBox panel = new VBox(18,
+                brandHeader(), title, instruction, helper,
+                spacer(6), grid, spacer(6),
+                backButton(), faqButton());
+        panel.setAlignment(Pos.TOP_CENTER);
+        panel.setPadding(new Insets(28, 34, 22, 34));
+        panel.setMaxWidth(760);
+        panel.setStyle(cardStyle(0.72, 20));
+
+        replacePage(panel, true);
+    }
+
+    private Button quickAmountButton(String label, String userData, boolean isOther) {
+        Button b = new Button(label);
+        b.setUserData(userData);
+        b.getStyleClass().addAll("atm-button", isOther ? "action-btn-red" : "action-btn-gold");
+        b.setPrefSize(280, 96);
+        b.setTextAlignment(TextAlignment.CENTER);
+        b.setAlignment(Pos.CENTER);
+        b.setWrapText(true);
+        b.setStyle("-fx-font-family:'Georgia';-fx-font-size:26px;-fx-font-weight:bold;");
+        b.setOnAction(this::buttonClicked);
+        return b;
+    }
+
     public void showResultPage(String title, String instruction, String body) {
         clearPageLabels();
 
@@ -752,10 +800,10 @@ class View {
 
     private static final String FAQ_TEXT =
             "HOW TO USE THE ATM\n================================\n\n" +
-            "• Log in by tapping your NFC card or using Manual Login.\n" +
-            "• The main screen now shows only large option buttons.\n" +
-            "• Each transaction opens on its own page.\n" +
-            "• Use the keypad, then press Ent or Continue.\n" +
-            "• Press Go Back at any time to return to the previous safe screen.\n\n" +
-            "Options available: Deposit, Withdraw, Balance, Transfer, Statement, Change PIN, Logout.";
+                    "• Log in by tapping your NFC card or using Manual Login.\n" +
+                    "• The main screen now shows only large option buttons.\n" +
+                    "• Each transaction opens on its own page.\n" +
+                    "• Use the keypad, then press Ent or Continue.\n" +
+                    "• Press Go Back at any time to return to the previous safe screen.\n\n" +
+                    "Options available: Deposit, Withdraw, Balance, Transfer, Statement, Change PIN, Logout.";
 }

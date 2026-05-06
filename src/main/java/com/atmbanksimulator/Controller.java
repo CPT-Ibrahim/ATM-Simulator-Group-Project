@@ -67,6 +67,9 @@ public class Controller {
             case "W100":
                 UIModel.processQuickWithdraw(100);
                 break;
+            case "W200":
+                UIModel.processQuickWithdraw(200);
+                break;
             case "WOther":
                 UIModel.processWithdrawOther();
                 break;

@@ -14,6 +14,7 @@ public class UIModel {
     private final String STATE_LOGGED_IN      = "logged_in";
     private final String STATE_DEPOSIT_AMT    = "deposit_amt";
     private final String STATE_WITHDRAW_AMT   = "withdraw_amt";
+    private final String STATE_WITHDRAW_QUICK = "withdraw_quick";
     private final String STATE_CHANGE_PW_OLD  = "change_pw_old";
     private final String STATE_CHANGE_PW_NEW  = "change_pw_new";
     private final String STATE_NEW_ACC_NO     = "new_acc_no";
@@ -177,13 +178,9 @@ public class UIModel {
 
     public void processWithdraw() {
         if (!requireLogin()) return;
-        startTransaction(
-                STATE_WITHDRAW_AMT,
-                "Withdraw",
-                "Enter the amount you want to withdraw",
-                "Use the keypad below, then press Ent / Continue.",
-                "Amount (£)"
-        );
+        resetTypedInput();
+        setState(STATE_WITHDRAW_QUICK);
+        view.showWithdrawQuickOptions();
     }
 
     private void confirmDeposit() {
@@ -466,6 +463,11 @@ public class UIModel {
         transferDestAcc = "";
         newAccNumber = "";
         newAccPasswd = "";
+        // If on the numpad entered from "Other Amount", go back to quick options
+        if (state.equals(STATE_WITHDRAW_AMT)) {
+            processWithdraw();
+            return;
+        }
         if (bank.loggedIn()) {
             setState(STATE_LOGGED_IN);
             view.showATMPanel();
@@ -498,7 +500,14 @@ public class UIModel {
     }
 
     public void processWithdrawOther() {
-        processWithdraw();
+        if (!requireLogin()) return;
+        startTransaction(
+                STATE_WITHDRAW_AMT,
+                "Withdraw",
+                "Enter the amount you want to withdraw",
+                "Use the keypad below, then press Ent / Continue.",
+                "Amount (\u00a3)"
+        );
     }
 
     public void processWithdrawPrompt() {
