@@ -37,16 +37,22 @@ public class Bank {
     // addBankAccount – inserts a new account into the database
     // -----------------------------------------------------------------------
     public boolean addBankAccount(BankAccount a) {
-        String sql = "INSERT IGNORE INTO bank_accounts "
-                + "(acc_number, acc_password, balance, account_type) VALUES (?, ?, ?, ?)";
+        // nfc_uid is NOT NULL and has a unique index, so we can't use NULL or ''.
+        // We store a unique placeholder "MANUAL_<accNumber>" for accounts created
+        // without an NFC card. This satisfies both constraints and can be
+        // overwritten later when a card is linked to the account.
+        String placeholder = "MANUAL_" + a.getAccNumber();
+        String sql = "INSERT INTO bank_accounts "
+                + "(acc_number, acc_password, balance, account_type, nfc_uid) VALUES (?, ?, ?, ?, ?)";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, a.getAccNumber());
             ps.setString(2, a.getaccPasswd());
             ps.setInt(3, a.getBalance());
             ps.setString(4, a.getAccountType());
-            ps.executeUpdate();
-            return true;
+            ps.setString(5, placeholder);
+            int rows = ps.executeUpdate();
+            return rows > 0;
         } catch (SQLException e) {
             System.out.println("Bank.addBankAccount failed: " + e.getMessage());
             return false;
@@ -62,14 +68,14 @@ public class Bank {
     }
 
     // -----------------------------------------------------------------------
-    // loginByUID – NEW: authenticates by NFC card UID instead of
+    // loginByUID – authenticates by NFC card UID instead of
     // account number + password. Called by NFCServer when a card is tapped.
     // -----------------------------------------------------------------------
     public boolean loginByUID(String uid) {
         logout();
 
         String sql = "SELECT acc_number, acc_password, balance, account_type "
-                   + "FROM bank_accounts WHERE nfc_uid = ?";
+                + "FROM bank_accounts WHERE nfc_uid = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -79,14 +85,14 @@ public class Bank {
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     loggedInAccount = makeBankAccount(
-                        rs.getString("acc_number"),
-                        rs.getString("acc_password"),
-                        rs.getInt("balance"),
-                        rs.getString("account_type")
+                            rs.getString("acc_number"),
+                            rs.getString("acc_password"),
+                            rs.getInt("balance"),
+                            rs.getString("account_type")
                     );
                     System.out.println("[Bank] NFC login success — account: "
-                        + loggedInAccount.getAccNumber()
-                        + " (" + loggedInAccount.getAccountType() + ")");
+                            + loggedInAccount.getAccNumber()
+                            + " (" + loggedInAccount.getAccountType() + ")");
                     return true;
                 } else {
                     System.out.println("[Bank] NFC login failed — UID not found: " + uid);
@@ -102,7 +108,7 @@ public class Bank {
     }
 
     // -----------------------------------------------------------------------
-    // login – original method kept for backwards compatibility (account number + password)
+    // login – original method (account number + password)
     // -----------------------------------------------------------------------
     public boolean login(String accountNumber, String password) {
         logout();
@@ -125,10 +131,10 @@ public class Bank {
                 if (rs.next()) {
                     loginFailures.put(accountNumber, 0);
                     loggedInAccount = makeBankAccount(
-                        rs.getString("acc_number"),
-                        rs.getString("acc_password"),
-                        rs.getInt("balance"),
-                        rs.getString("account_type")
+                            rs.getString("acc_number"),
+                            rs.getString("acc_password"),
+                            rs.getInt("balance"),
+                            rs.getString("account_type")
                     );
                     return true;
                 } else {
@@ -276,8 +282,6 @@ public class Bank {
     // -----------------------------------------------------------------------
     public boolean changePassword(String newPass) {
         if (!loggedIn()) return false;
-        // The UI is an ATM keypad, so the credential is treated as a numeric PIN.
-        // Minimum 4 digits keeps the Change PIN flow compatible with the numpad.
         if (newPass == null || !newPass.matches("\\d{4,}")) return false;
         String sql = "UPDATE bank_accounts SET acc_password = ? WHERE acc_number = ?";
         try (Connection conn = DBConnection.getConnection();

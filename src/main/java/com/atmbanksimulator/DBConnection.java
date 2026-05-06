@@ -32,7 +32,7 @@ public class DBConnection {
     private static final boolean DEBUG = true;
 
     // Toggle this ON/OFF to show or hide the database inspector window.
-    public static boolean DB_INSPECTOR_ENABLED = true;
+    public static boolean DB_INSPECTOR_ENABLED = false;
 
     private static Stage inspectorStage;
 
@@ -154,19 +154,14 @@ public class DBConnection {
             // Stay visible above the fullscreen main ATM window
             stage.setAlwaysOnTop(true);
 
-            // When the main window is fullscreen its reported width equals the
-            // screen width, so the old calculation pushed the inspector off-screen
-            // to the right.  Use screen bounds to keep it on-screen instead.
             javafx.geometry.Rectangle2D screenBounds =
                     javafx.stage.Screen.getPrimary().getVisualBounds();
             if (owner != null && !owner.isFullScreen()) {
                 double x = owner.getX() + owner.getWidth() + 10;
-                // clamp so it never goes off the right edge
                 x = Math.min(x, screenBounds.getMaxX() - 910);
                 stage.setX(x);
                 stage.setY(owner.getY());
             } else {
-                // Main window is fullscreen – anchor inspector to top-right of screen
                 stage.setX(screenBounds.getMaxX() - 910);
                 stage.setY(screenBounds.getMinY() + 10);
             }
