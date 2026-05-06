@@ -780,17 +780,117 @@ class View {
     // =====================================================================
     // FAQ
     // =====================================================================
+    private boolean faqOverlayVisible = false;
+
     private void openFAQWindow() {
-        Stage s = new Stage();
-        s.setTitle("FAQ – Horizon Bank ATM");
-        TextArea t = new TextArea(FAQ_TEXT);
-        t.setEditable(false);
-        t.setWrapText(true);
-        t.setPrefSize(460, 540);
-        t.setStyle("-fx-font-family:'Georgia';-fx-font-size:13px;" +
-                "-fx-control-inner-background:#2A1508;-fx-text-fill:#F5ECD7;");
-        s.setScene(new Scene(t, 480, 560));
-        s.show();
+        if (faqOverlayVisible) return;
+        faqOverlayVisible = true;
+
+        // ── Dark backdrop covering the whole screen ──────────────────────
+        Region backdrop = new Region();
+        backdrop.setStyle("-fx-background-color:rgba(6,2,0,0.82);");
+        backdrop.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+
+        // ── Brand header ─────────────────────────────────────────────────
+        Label bankLbl = new Label("HORIZON BANK\u2122");
+        bankLbl.setStyle("-fx-font-family:'Georgia';-fx-font-size:13px;-fx-font-weight:bold;" +
+                "-fx-text-fill:#D4A843;-fx-letter-spacing:2px;");
+
+        Label titleLbl = new Label("Help & FAQ");
+        titleLbl.setStyle("-fx-font-family:'Georgia';-fx-font-size:28px;-fx-font-weight:bold;" +
+                "-fx-text-fill:#F5ECD7;" +
+                "-fx-effect:dropshadow(gaussian,rgba(0,0,0,.7),10,.2,0,2);");
+
+        Region sep = new Region();
+        sep.setPrefHeight(2);
+        sep.setPrefWidth(320);
+        sep.setMaxWidth(320);
+        sep.setStyle("-fx-background-color:linear-gradient(" +
+                "to right,transparent,rgba(212,168,67,.9),transparent);");
+
+        VBox header = new VBox(5, bankLbl, titleLbl, sep);
+        header.setAlignment(Pos.CENTER);
+        header.setPadding(new Insets(20, 0, 14, 0));
+
+        // ── Scrollable FAQ body ──────────────────────────────────────────
+        Label body = new Label(FAQ_TEXT);
+        body.setWrapText(true);
+        body.setStyle("-fx-font-family:'Georgia';-fx-font-size:13.5px;" +
+                "-fx-text-fill:#F0DFB8;-fx-line-spacing:3px;");
+        body.setMaxWidth(480);
+
+        ScrollPane scroll = new ScrollPane(body);
+        scroll.setFitToWidth(true);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scroll.setStyle("-fx-background:transparent;-fx-background-color:transparent;" +
+                "-fx-border-color:transparent;");
+        scroll.setPadding(new Insets(0, 6, 0, 6));
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+
+        // ── Close button ─────────────────────────────────────────────────
+        Button close = new Button("✕   Close");
+        close.getStyleClass().addAll("atm-button", "action-btn-gold");
+        close.setPrefSize(200, 48);
+        close.setStyle("-fx-font-family:'Georgia';-fx-font-size:16px;-fx-font-weight:bold;");
+
+        VBox card = new VBox(0, header, scroll, new Region(), close);
+        VBox.setVgrow(card.getChildren().get(2), Priority.ALWAYS); // spacer before button
+        ((Region) card.getChildren().get(2)).setMinHeight(14);
+        card.setAlignment(Pos.TOP_CENTER);
+        card.setPadding(new Insets(0, 22, 22, 22));
+        card.setMaxWidth(560);
+        card.setMaxHeight(680);
+        card.setMinWidth(340);
+        card.setStyle(
+                "-fx-background-color:rgba(18,7,1,0.97);" +
+                        "-fx-background-radius:18px;" +
+                        "-fx-border-color:rgba(212,168,67,.65);" +
+                        "-fx-border-width:1.8px;" +
+                        "-fx-border-radius:18px;" +
+                        "-fx-effect:dropshadow(gaussian,rgba(0,0,0,.90),48,.14,0,10);");
+
+        // ── Overlay = backdrop + centred card ────────────────────────────
+        StackPane overlay = new StackPane(backdrop, card);
+        overlay.setAlignment(Pos.CENTER);
+        overlay.setPickOnBounds(true);
+
+        // Insert above pageLayer but keep soundButton on top
+        int soundIdx = root.getChildren().indexOf(soundButton);
+        root.getChildren().add(soundIdx, overlay);
+
+        // ── Fade in ──────────────────────────────────────────────────────
+        overlay.setOpacity(0);
+        card.setTranslateY(24);
+
+        FadeTransition fadeIn = new FadeTransition(Duration.millis(300), overlay);
+        fadeIn.setFromValue(0);
+        fadeIn.setToValue(1);
+
+        TranslateTransition slideIn = new TranslateTransition(Duration.millis(320), card);
+        slideIn.setFromY(24);
+        slideIn.setToY(0);
+        slideIn.setInterpolator(Interpolator.EASE_OUT);
+
+        fadeIn.play();
+        slideIn.play();
+
+        // ── Close action ─────────────────────────────────────────────────
+        Runnable dismiss = () -> {
+            if (!faqOverlayVisible) return;
+            FadeTransition fadeOut = new FadeTransition(Duration.millis(220), overlay);
+            fadeOut.setFromValue(1);
+            fadeOut.setToValue(0);
+            fadeOut.setOnFinished(ev -> {
+                root.getChildren().remove(overlay);
+                faqOverlayVisible = false;
+            });
+            fadeOut.play();
+        };
+
+        close.setOnAction(e -> dismiss.run());
+        // Tap the dark backdrop to close
+        backdrop.setOnMouseClicked(e -> dismiss.run());
     }
 
     /** @deprecated kept for old launch paths. */
@@ -799,11 +899,231 @@ class View {
     }
 
     private static final String FAQ_TEXT =
-            "HOW TO USE THE ATM\n================================\n\n" +
-                    "• Log in by tapping your NFC card or using Manual Login.\n" +
-                    "• The main screen now shows only large option buttons.\n" +
-                    "• Each transaction opens on its own page.\n" +
-                    "• Use the keypad, then press Ent or Continue.\n" +
-                    "• Press Go Back at any time to return to the previous safe screen.\n\n" +
-                    "Options available: Deposit, Withdraw, Balance, Transfer, Statement, Change PIN, Logout.";
+
+            "══════════════════════════════════════════════\n" +
+                    "  HORIZON BANK™  —  ATM HELP & FAQ\n" +
+                    "══════════════════════════════════════════════\n\n" +
+
+                    "─────────────────────────────────────────────\n" +
+                    "  1.  LOGGING IN\n" +
+                    "─────────────────────────────────────────────\n\n" +
+
+                    "NFC Card Login\n" +
+                    "  Tap your NFC-enabled card or phone against\n" +
+                    "  the reader. The ATM detects your card\n" +
+                    "  automatically and logs you in without\n" +
+                    "  requiring you to type anything.\n\n" +
+
+                    "Manual Login\n" +
+                    "  Press 'Login Manually' on the welcome screen.\n" +
+                    "  Enter your account number using the on-screen\n" +
+                    "  keypad, press Ent, then enter your PIN and\n" +
+                    "  press Ent again.\n\n" +
+
+                    "Forgotten PIN\n" +
+                    "  Visit a branch or contact support. There is\n" +
+                    "  no PIN-reset option available at the ATM\n" +
+                    "  for security reasons.\n\n" +
+
+                    "─────────────────────────────────────────────\n" +
+                    "  2.  NAVIGATING THE APP\n" +
+                    "─────────────────────────────────────────────\n\n" +
+
+                    "  • After login the Main Menu appears with\n" +
+                    "    six service buttons and a Logout button.\n\n" +
+                    "  • Every screen has a 'Go Back' button that\n" +
+                    "    returns you safely to the previous screen\n" +
+                    "    or the Main Menu.\n\n" +
+                    "  • Press Esc to toggle full-screen mode.\n\n" +
+                    "  • The 🔊 sound icon in the top-right corner\n" +
+                    "    mutes or unmutes all ATM sounds.\n\n" +
+                    "  • This FAQ panel is available on every screen\n" +
+                    "    via the '? FAQ' button at the bottom.\n\n" +
+
+                    "─────────────────────────────────────────────\n" +
+                    "  3.  WITHDRAW\n" +
+                    "─────────────────────────────────────────────\n\n" +
+
+                    "Quick Withdraw\n" +
+                    "  Pressing 'Withdraw' from the Main Menu\n" +
+                    "  opens a quick-pick screen with preset\n" +
+                    "  amounts: £10, £20, £50, £100, £200.\n" +
+                    "  Tap the amount you want — it is processed\n" +
+                    "  immediately, no further steps needed.\n\n" +
+
+                    "Other Amount\n" +
+                    "  Select 'Other Amount →' to open the full\n" +
+                    "  keypad. Type any amount and press Ent or\n" +
+                    "  'Continue' to confirm.\n\n" +
+
+                    "Insufficient Funds\n" +
+                    "  If your balance is too low the transaction\n" +
+                    "  is declined and your balance is unchanged.\n\n" +
+
+                    "Low Balance Warning\n" +
+                    "  A warning is displayed on the result screen\n" +
+                    "  whenever your balance falls below £50.\n\n" +
+
+                    "─────────────────────────────────────────────\n" +
+                    "  4.  DEPOSIT\n" +
+                    "─────────────────────────────────────────────\n\n" +
+
+                    "  • Select 'Deposit' from the Main Menu.\n" +
+                    "  • Enter the amount using the on-screen\n" +
+                    "    keypad and press Ent or 'Continue'.\n" +
+                    "  • The funds are added to your account\n" +
+                    "    instantly and a confirmation is shown.\n\n" +
+
+                    "─────────────────────────────────────────────\n" +
+                    "  5.  BALANCE ENQUIRY\n" +
+                    "─────────────────────────────────────────────\n\n" +
+
+                    "  • Select 'Balance' from the Main Menu.\n" +
+                    "  • Your current available balance is\n" +
+                    "    displayed immediately — no keypad entry\n" +
+                    "    is required.\n" +
+                    "  • A low-balance alert appears if your\n" +
+                    "    balance is under £50.\n\n" +
+
+                    "─────────────────────────────────────────────\n" +
+                    "  6.  TRANSFER\n" +
+                    "─────────────────────────────────────────────\n\n" +
+
+                    "  • Select 'Transfer' from the Main Menu.\n" +
+                    "  • Step 1 — enter the destination account\n" +
+                    "    number and press Ent.\n" +
+                    "  • Step 2 — enter the amount to send\n" +
+                    "    and press Ent.\n" +
+                    "  • You cannot transfer to your own account.\n" +
+                    "  • The destination account must exist;\n" +
+                    "    otherwise the transfer is rejected.\n" +
+                    "  • Transfers are instant and cannot be\n" +
+                    "    reversed at the ATM.\n\n" +
+
+                    "─────────────────────────────────────────────\n" +
+                    "  7.  MINI STATEMENT\n" +
+                    "─────────────────────────────────────────────\n\n" +
+
+                    "  • Select 'Statement' from the Main Menu.\n" +
+                    "  • Shows your most recent transactions\n" +
+                    "    including deposits, withdrawals and\n" +
+                    "    transfers with date and amount.\n" +
+                    "  • The statement is read-only and cannot\n" +
+                    "    be printed from this terminal.\n\n" +
+
+                    "─────────────────────────────────────────────\n" +
+                    "  8.  CHANGE PIN\n" +
+                    "─────────────────────────────────────────────\n\n" +
+
+                    "  • Select 'Change PIN' from the Main Menu.\n" +
+                    "  • Step 1 — enter your current PIN.\n" +
+                    "  • Step 2 — enter the new PIN you want.\n" +
+                    "  • Choose a PIN that is hard to guess and\n" +
+                    "    do not share it with anyone.\n" +
+                    "  • The change takes effect immediately.\n\n" +
+
+                    "─────────────────────────────────────────────\n" +
+                    "  9.  CREATING A NEW ACCOUNT\n" +
+                    "─────────────────────────────────────────────\n\n" +
+
+                    "  • On the welcome / login screen press\n" +
+                    "    'Create New Account'.\n" +
+                    "  • Step 1 — choose an account number.\n" +
+                    "  • Step 2 — set a secure PIN.\n" +
+                    "  • Step 3 — select an account type:\n\n" +
+                    "      1  Student  — basic account for\n" +
+                    "                    students in education.\n" +
+                    "      2  Prime    — premium account with\n" +
+                    "                    enhanced features.\n" +
+                    "      3  Saving   — dedicated savings\n" +
+                    "                    account.\n" +
+                    "      4  Standard — everyday current\n" +
+                    "                    account.\n\n" +
+                    "  • Step 4 — confirmation. Your account is\n" +
+                    "    created and saved to the database.\n\n" +
+
+                    "─────────────────────────────────────────────\n" +
+                    "  10.  NFC CARD / ANDROID COMPANION APP\n" +
+                    "─────────────────────────────────────────────\n\n" +
+
+                    "  • The Android companion app (NFC Listener)\n" +
+                    "    reads your card's UID and sends it to\n" +
+                    "    this ATM over a local Wi-Fi connection.\n\n" +
+                    "  • Both devices must be on the same network,\n" +
+                    "    or ADB reverse-tunnel must be active\n" +
+                    "    (set up automatically at startup).\n\n" +
+                    "  • Tap your physical NFC card to the back\n" +
+                    "    of the phone running the companion app;\n" +
+                    "    the ATM logs in within seconds.\n\n" +
+                    "  • Each card UID is linked to exactly one\n" +
+                    "    bank account in the database.\n\n" +
+
+                    "─────────────────────────────────────────────\n" +
+                    "  11.  DATABASE & SQL INSPECTOR\n" +
+                    "─────────────────────────────────────────────\n\n" +
+
+                    "  • The ATM connects to a remote MySQL\n" +
+                    "    database hosted at Brighton Domains.\n" +
+                    "  • All account data, balances and\n" +
+                    "    transactions are stored there.\n\n" +
+                    "  • A built-in SQL Inspector window opens\n" +
+                    "    alongside the ATM (developer tool).\n" +
+                    "  • It shows the live database schema and\n" +
+                    "    lets you run any SQL query directly.\n" +
+                    "  • The inspector floats above the ATM\n" +
+                    "    window and can be moved freely.\n\n" +
+
+                    "─────────────────────────────────────────────\n" +
+                    "  12.  THE ON-SCREEN KEYPAD\n" +
+                    "─────────────────────────────────────────────\n\n" +
+
+                    "  • Tap digit buttons or use your keyboard\n" +
+                    "    number keys to enter values.\n" +
+                    "  • CLR / Backspace — deletes all input.\n" +
+                    "  • ✓ (green button) / Enter key / 'Continue'\n" +
+                    "    button — confirms your entry.\n" +
+                    "  • Input is hidden (shown as dots) when\n" +
+                    "    entering your PIN for security.\n\n" +
+
+                    "─────────────────────────────────────────────\n" +
+                    "  13.  SECURITY & SAFETY TIPS\n" +
+                    "─────────────────────────────────────────────\n\n" +
+
+                    "  • Always log out when you have finished\n" +
+                    "    using the ATM.\n" +
+                    "  • Never share your PIN with anyone.\n" +
+                    "  • Cover the screen when entering your\n" +
+                    "    PIN in a public setting.\n" +
+                    "  • All connections to the database use\n" +
+                    "    SSL encryption.\n" +
+                    "  • Session data is cleared from memory\n" +
+                    "    as soon as you log out.\n\n" +
+
+                    "─────────────────────────────────────────────\n" +
+                    "  14.  TROUBLESHOOTING\n" +
+                    "─────────────────────────────────────────────\n\n" +
+
+                    "App won't connect to database\n" +
+                    "  Check your internet connection. The ATM\n" +
+                    "  requires access to the remote MySQL server.\n\n" +
+
+                    "NFC tap not detected\n" +
+                    "  Ensure the Android companion app is open\n" +
+                    "  and the ADB tunnel is running. Try tapping\n" +
+                    "  the card again slowly.\n\n" +
+
+                    "SQL Inspector not visible\n" +
+                    "  It may be behind the ATM window. Use\n" +
+                    "  Alt+Tab or check the taskbar. The inspector\n" +
+                    "  always stays on top once focused.\n\n" +
+
+                    "Transaction declined unexpectedly\n" +
+                    "  Check your balance first. If funds are\n" +
+                    "  sufficient, the database connection may\n" +
+                    "  have timed out — try again.\n\n" +
+
+                    "══════════════════════════════════════════════\n" +
+                    "  Horizon Bank™ ATM  |  University Project\n" +
+                    "  Built with Java 21 + JavaFX + MySQL\n" +
+                    "══════════════════════════════════════════════\n";
 }
